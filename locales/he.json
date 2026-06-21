@@ -1,0 +1,30 @@
+{
+  "api": {
+    "errors": {
+      "invalidPrompt": "הנושא אינו חוקי",
+      "promptTooShort": "הנושא קצר מדי - נדרשים לפחות 10 תווים",
+      "promptTooLong": "הנושא ארוך מדי - מקסימום 500 תווים",
+      "invalidAgeGroup": "קבוצת הגיל אינה חוקית",
+      "invalidTheme": "הנושא אינו חוקי",
+      "apiError": "שגיאה בעיבוד בקשתך",
+      "dbError": "שגיאה בקישור לבסיס הנתונים",
+      "claudeError": "שגיאה בעיבוד בקשתך",
+      "parseError": "שגיאה בעיבוד התשובה",
+      "rateLimitExceeded": "חרגת ממגבלת הבקשות - נסה שוב בעוד שעה",
+      "methodNotAllowed": "שיטת הגישה אינה מורשית",
+      "serverError": "שגיאת שרת פנימית - נסה שוב מאוחר יותר",
+      "claudeUnavailable": "שירות יצירת הסיפורים אינו זמין כרגע",
+      "noStoriesFound": "לא נמצאו סיפורי השראה",
+      "missingApiKey": "מפתח ה-API חסר"
+    },
+    "success": {
+      "storyGenerated": "הסיפור נוצר בהצלחה"
+    }
+  },
+  "validation": {
+    "required": "שדה זה הוא חובה",
+    "tooShort": "ערך קצר מדי",
+    "tooLong": "ערך ארוך מדי",
+    "invalidFormat": "פורמט לא חוקי"
+  }
+}
