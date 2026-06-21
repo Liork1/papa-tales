@@ -1,0 +1,32 @@
+{
+  "name": "papa-tales",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "seed": "tsx scripts/seed.ts",
+    "supabase:start": "supabase start",
+    "supabase:stop": "supabase stop",
+    "supabase:reset": "supabase db reset"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.105.0",
+    "@supabase/supabase-js": "^2.45.4",
+    "dotenv": "^17.4.2",
+    "next": "^14.2.29",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.16.10",
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "eslint": "^8.57.1",
+    "eslint-config-next": "^14.2.29",
+    "tsx": "^4.19.1",
+    "typescript": "^5.6.3"
+  }
+}
