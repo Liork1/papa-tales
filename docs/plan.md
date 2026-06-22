@@ -145,11 +145,14 @@ according to the execution phases described in execution-phases.md
 
 ### Phase 3: Image Generation & UI (Out of Scope - Future MVP)
 
-**Placeholder for future implementation**:
-- Generate illustrations for stories
-- Create interactive story UI
-- Add user accounts and story history
-- Implement story sharing features
+The ultimate goal is to create a physical-looking children's picture book , where the right page has the text generated in previous phase the left page features a full illustration, similar to the mixed-media watercolor style found in professional children's books.
+
+Please follow these steps:
+
+Structure: Take the  story provided below and divide it into logical pages.
+
+- Visual Style Guide: Define a consistent aesthetic to be used in every prompt. This should include: "soft mixed-media children's book illustration," "gentle watercolor washes and soft colored pencil linework," "warm, whimsical lighting," "a cozy, inviting color palette (pastels mixed with warm greens and blues)," and "a mockup of an open hardcover book lying flat, showing page texture."
+- add a cover to the the story with the book name and the writer name if avaialable
 
 ---
 

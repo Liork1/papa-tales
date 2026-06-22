@@ -135,7 +135,7 @@ export default async function handler(
       prompt: validRequest.prompt,
       inspirationalStories,
       ageGroup: validRequest.ageGroup,
-      maxTokens: validRequest.maxLength ? Math.ceil(validRequest.maxLength * 4) : 5000,
+      maxTokens: validRequest.maxLength ? Math.ceil(validRequest.maxLength * 4) : undefined,
     });
     logger.info("ai", "story_generated", {
       title: generated.title,
