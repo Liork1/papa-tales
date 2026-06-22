@@ -10,7 +10,7 @@ export function initGenerativeModel(): GenerativeModel {
     if (!apiKey) throw new Error("Missing GOOGLE_API_KEY");
     genAI = new GoogleGenerativeAI(apiKey);
   }
-  return genAI.getGenerativeModel({ model: "gemini-3.5-flash" });
+  return genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
 }
 
 function buildSystemPrompt(
@@ -51,17 +51,16 @@ Hard requirements:
 Inspirational stories:
 ${storiesContext}
 
-Your response must be pure JSON only (no extra text):
+Your response must be pure JSON only (no extra text). Example structure (replace all values with real Hebrew content):
 {
-  "title": "<Hebrew story title>",
+  "title": "שם הסיפור בעברית",
   "pages": {
-    "1": "<page 1 content — up to ${maxWordsPerPage} Hebrew words>",
-    "2": "<page 2 content — up to ${maxWordsPerPage} Hebrew words>",
-    "...": "...",
-    "${pageRange.split("-")[1]}": "<last page content — up to ${maxWordsPerPage} Hebrew words>"
+    "1": "תוכן עמוד 1 בעברית — עד ${maxWordsPerPage} מילים",
+    "2": "תוכן עמוד 2 בעברית — עד ${maxWordsPerPage} מילים",
+    "${pageRange.split("-")[1]}": "תוכן העמוד האחרון — עד ${maxWordsPerPage} מילים"
   },
-  "rhymeScheme": "AABB or ABAB",
-  "themes": ["theme1", "theme2"]
+  "rhymeScheme": "AABB",
+  "themes": ["חברות", "הרפתקה"]
 }`;
 }
 
@@ -82,7 +81,7 @@ export interface GeneratedStory {
 export async function generateStory(
   options: GenerateStoryOptions
 ): Promise<GeneratedStory> {
-  const { prompt, inspirationalStories, ageGroup = "4-6", maxTokens = 8192 } = options;
+  const { prompt, inspirationalStories, ageGroup = "4-6", maxTokens = 15000 } = options;
 
   const model = initGenerativeModel();
   const systemPrompt = buildSystemPrompt(inspirationalStories, ageGroup);

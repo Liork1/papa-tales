@@ -1,0 +1,433 @@
+/* ── Layout ── */
+.wrapper {
+  min-height: 100vh;
+  background: radial-gradient(ellipse at top, #3b1f0a 0%, #1a0d03 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  gap: 1.75rem;
+}
+
+/* ── Story Form ── */
+.formCard {
+  background: #fffef5;
+  border-radius: 14px;
+  padding: 2.5rem 2.25rem;
+  width: min(520px, 100%);
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.55);
+  direction: rtl;
+}
+
+.appTitle {
+  font-size: 2rem;
+  font-weight: 800;
+  color: #2e1200;
+  text-align: center;
+  margin-bottom: 0.25rem;
+  letter-spacing: -0.5px;
+}
+
+.appSubtitle {
+  font-size: 0.9rem;
+  color: #7a5230;
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.field {
+  margin-bottom: 1.25rem;
+}
+
+.label {
+  display: block;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: #5c3317;
+  margin-bottom: 0.35rem;
+  letter-spacing: 0.02em;
+}
+
+.input,
+.select,
+.textarea {
+  width: 100%;
+  padding: 0.65rem 0.9rem;
+  border: 2px solid #dcc9a8;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-family: inherit;
+  background: #fffdf0;
+  color: #2e1200;
+  direction: rtl;
+  transition: border-color 0.18s;
+  appearance: none;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: #8b4513;
+  background: #fff;
+}
+
+.textarea {
+  height: 88px;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+.charCount {
+  font-size: 0.72rem;
+  color: #b09070;
+  text-align: left;
+  margin-top: 0.25rem;
+}
+
+.generateBtn {
+  width: 100%;
+  padding: 0.9rem;
+  background: linear-gradient(135deg, #8b4513, #6b3010);
+  color: #fff;
+  border: none;
+  border-radius: 9px;
+  font-size: 1.05rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: opacity 0.18s, transform 0.1s;
+  font-family: inherit;
+  letter-spacing: 0.02em;
+  margin-top: 0.5rem;
+}
+
+.generateBtn:hover:not(:disabled) {
+  opacity: 0.88;
+  transform: translateY(-1px);
+}
+
+.generateBtn:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.generateBtn:disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+.errorBox {
+  background: #fff0f0;
+  border: 1.5px solid #f5a0a0;
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  font-size: 0.9rem;
+  color: #b00020;
+  margin-bottom: 1.25rem;
+  direction: rtl;
+}
+
+/* ── Loading ── */
+.loadingWrap {
+  color: #f5e6d3;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(245, 230, 211, 0.2);
+  border-top-color: #f5e6d3;
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.loadingText {
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.loadingHint {
+  font-size: 0.8rem;
+  opacity: 0.6;
+}
+
+/* ── Book container ── */
+.bookWrap {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* The open book spread */
+.book {
+  display: flex;
+  width: min(920px, 97vw);
+  height: min(580px, 56vw);
+  position: relative;
+  border-radius: 3px 10px 10px 3px;
+  box-shadow:
+    -18px 6px 40px rgba(0, 0, 0, 0.6),
+    18px 6px 40px rgba(0, 0, 0, 0.35),
+    0 30px 70px rgba(0, 0, 0, 0.5);
+  overflow: hidden;
+}
+
+/* Spine shadow in the middle */
+.book::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 0;
+  transform: translateX(-50%);
+  width: 10px;
+  height: 100%;
+  background: linear-gradient(
+    to right,
+    rgba(0,0,0,0.25) 0%,
+    rgba(0,0,0,0.08) 40%,
+    rgba(0,0,0,0.08) 60%,
+    rgba(0,0,0,0.25) 100%
+  );
+  z-index: 10;
+  pointer-events: none;
+}
+
+/* ── Illustration page (left) ── */
+.illustrationPage {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #ede8dc;
+  border-right: 1px solid #c8b898;
+}
+
+.illustrationImage {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.illustrationSkeleton {
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(110deg, #e2d8c4 25%, #ede8dc 50%, #e2d8c4 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease-in-out infinite;
+}
+
+@keyframes shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+.illustrationFallback {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 4rem;
+  background: #e8dfd0;
+  color: #a09070;
+}
+
+/* ── Text page (right) ── */
+.textPage {
+  flex: 1;
+  background: #fffef5;
+  padding: clamp(1.4rem, 3vw, 2.75rem);
+  direction: rtl;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Subtle page grain */
+.textPage::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.03'/%3E%3C/svg%3E");
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.rhymeBadge {
+  position: absolute;
+  top: 0.9rem;
+  left: 0.9rem;
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: #b09060;
+  background: #f5ead0;
+  padding: 0.15rem 0.5rem;
+  border-radius: 4px;
+  letter-spacing: 0.05em;
+}
+
+.pageText {
+  font-size: clamp(0.9rem, 2vw, 1.2rem);
+  line-height: 2;
+  color: #2e1200;
+  white-space: pre-line;
+  font-family: "Georgia", "Times New Roman", "David", serif;
+  text-align: right;
+  position: relative;
+  z-index: 1;
+}
+
+.pageFooter {
+  position: absolute;
+  bottom: 0.9rem;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+.pageNum {
+  font-size: 0.72rem;
+  color: #b09070;
+}
+
+/* ── Cover spread ── */
+.coverIllustrationPage {
+  flex: 1;
+  position: relative;
+  overflow: hidden;
+  background: #ede8dc;
+  border-right: 1px solid #c8b898;
+}
+
+.coverTextPage {
+  flex: 1;
+  background: linear-gradient(160deg, #3b1f0a 0%, #5c3317 60%, #2e1200 100%);
+  padding: clamp(1.5rem, 3.5vw, 3rem);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+/* Decorative border on cover */
+.coverTextPage::before {
+  content: "";
+  position: absolute;
+  inset: 10px;
+  border: 1.5px solid rgba(245, 218, 165, 0.3);
+  border-radius: 2px;
+  pointer-events: none;
+}
+
+.coverTitle {
+  font-size: clamp(1.3rem, 3vw, 2rem);
+  font-weight: 800;
+  color: #f5daa5;
+  text-align: center;
+  direction: rtl;
+  line-height: 1.35;
+  font-family: "Georgia", serif;
+  text-shadow: 0 2px 12px rgba(0,0,0,0.4);
+  position: relative;
+  z-index: 1;
+}
+
+.coverAuthor {
+  font-size: clamp(0.8rem, 1.5vw, 1rem);
+  color: #d4b07a;
+  text-align: center;
+  direction: rtl;
+  position: relative;
+  z-index: 1;
+}
+
+.coverDecor {
+  font-size: 1.8rem;
+  opacity: 0.6;
+  position: relative;
+  z-index: 1;
+}
+
+.coverHint {
+  position: absolute;
+  bottom: 1.5rem;
+  font-size: 0.7rem;
+  color: rgba(245, 218, 165, 0.4);
+  letter-spacing: 0.08em;
+  z-index: 1;
+}
+
+/* ── Navigation ── */
+.navigation {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+}
+
+.navBtn {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1.5px solid rgba(255, 255, 255, 0.25);
+  color: #f5e6d3;
+  padding: 0.55rem 1.4rem;
+  border-radius: 24px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-family: inherit;
+  font-weight: 500;
+  transition: background 0.18s, border-color 0.18s;
+  backdrop-filter: blur(6px);
+}
+
+.navBtn:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.45);
+}
+
+.navBtn:disabled {
+  opacity: 0.25;
+  cursor: not-allowed;
+}
+
+.pageIndicator {
+  font-size: 0.82rem;
+  color: rgba(245, 230, 211, 0.7);
+  min-width: 70px;
+  text-align: center;
+}
+
+.newStoryBtn {
+  background: transparent;
+  border: 1.5px solid rgba(245, 218, 165, 0.35);
+  color: rgba(245, 218, 165, 0.7);
+  padding: 0.4rem 1.1rem;
+  border-radius: 20px;
+  cursor: pointer;
+  font-size: 0.78rem;
+  font-family: inherit;
+  transition: all 0.18s;
+}
+
+.newStoryBtn:hover {
+  background: rgba(245, 218, 165, 0.1);
+  color: #f5daa5;
+  border-color: rgba(245, 218, 165, 0.6);
+}
