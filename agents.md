@@ -60,12 +60,12 @@ interface GenerateStoryRequest {
 interface GenerateStoryResponse {
   success: boolean;
   data?: {
-    story: string;                // Full story in Hebrew
-    title: string;                // Generated title
-    rhymeScheme: string;           // e.g., "AABB"
+    pages: Record<string, string>;  // Story split into pages (e.g., {"1": "...", "2": "..."})
+    title: string;                   // Generated title
+    rhymeScheme: string;             // e.g., "AABB"
     wordCount: number;
-    generatedAt: string;           // ISO timestamp
-    inspiration?: string[];        // Themes from inspirational stories
+    generatedAt: string;             // ISO timestamp
+    inspiration?: string[];          // Themes from inspirational stories
   };
   error?: {
     code: string;
@@ -147,26 +147,26 @@ CREATE INDEX idx_stories_language ON stories(language);
 
 **Key Functions**:
 ```typescript
-// Initialize Claude client
-export const initClaudeClient = () => {
-  // Returns Anthropic client with API key from .env.local
+// Initialize generative model client
+export const initGenerativeModel = () => {
+  // Returns Google Generative AI client with API key from .env.local
 }
 
-// Generate story using Claude
+// Generate story using generative AI
 export const generateStory = async (options: {
   prompt: string;              // Hebrew prompt
   inspirationalStories: Story[];
   ageGroup: string;
   maxTokens?: number;
 }) => Promise<{
-  story: string;
+  pages: Record<string, string>;
   title: string;
   rhymeScheme: string;
 }>
 
-// Parse Claude response
+// Parse response with pages
 export const parseStoryResponse = (response: string) => {
-  // Extract story, title, rhyme scheme from response
+  // Extract pages, title, rhyme scheme from response
 }
 ```
 

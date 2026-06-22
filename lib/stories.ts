@@ -7,30 +7,41 @@ export interface StoryContext {
   keywords?: string[];
 }
 
+function scoreByKeywords(story: Story, keywords: string[]): number {
+  if (!keywords.length) return 0;
+  const haystack = [story.title, ...(story.keywords ?? []), story.theme ?? ""]
+    .join(" ")
+    .toLowerCase();
+  return keywords.filter((kw) => haystack.includes(kw.toLowerCase())).length;
+}
+
 export async function getContextualStories(
   context: StoryContext,
   limit: number = 3
 ): Promise<Story[]> {
-  const { theme, ageGroup } = context;
+  const { theme, ageGroup, keywords = [] } = context;
 
-  // Try to fetch stories matching the given filters
-  const filtered = await getStories({ theme, ageGroup, limit });
+  // Fetch a wider pool then re-rank by keyword relevance
+  const pool = await getStories({ theme, ageGroup, limit: 20 });
 
-  if (filtered.length >= limit) {
-    return filtered.slice(0, limit);
+  if (pool.length === 0) {
+    return getRandomStories(limit);
   }
 
-  // Fall back to partially-filtered then random to fill quota
-  if (filtered.length > 0) {
-    const needed = limit - filtered.length;
-    const extras = await getRandomStories(needed * 2);
-    const existingIds = new Set(filtered.map((s) => s.id));
-    const fresh = extras.filter((s) => !existingIds.has(s.id)).slice(0, needed);
-    return [...filtered, ...fresh];
+  if (keywords.length > 0) {
+    pool.sort((a, b) => scoreByKeywords(b, keywords) - scoreByKeywords(a, keywords));
   }
 
-  // No matching stories — just return random
-  return getRandomStories(limit);
+  if (pool.length >= limit) {
+    return pool.slice(0, limit);
+  }
+
+  // Fill remaining slots with random stories not already in pool
+  const needed = limit - pool.length;
+  const extras = await getRandomStories(needed * 2);
+  const existingIds = new Set(pool.map((s) => s.id));
+  const fresh = extras.filter((s) => !existingIds.has(s.id)).slice(0, needed);
+  return [...pool, ...fresh];
 }
 
 export function buildInspirationContext(stories: Story[]): string {
