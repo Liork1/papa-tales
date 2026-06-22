@@ -8,7 +8,7 @@ export interface GenerateStoryRequest {
 export interface GenerateStoryResponse {
   success: boolean;
   data?: {
-    story: string;
+    pages: Record<string, string>;
     title: string;
     rhymeScheme: string;
     wordCount: number;

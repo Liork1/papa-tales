@@ -1,12 +1,12 @@
 # Papa Tales
 
-AI-powered Hebrew children's story generator. Generates rhyming stories using Claude Opus with inspirational story seeds from a local Supabase database.
+AI-powered Hebrew children's story generator. Generates rhyming stories using Gemini Flash with inspirational story seeds from a local Supabase database.
 
 ## Prerequisites
 
 - Node.js 18+
 - [Supabase CLI](https://supabase.com/docs/guides/cli) (`brew install supabase/tap/supabase`)
-- Anthropic API key
+- Google AI API key
 
 ## Setup
 
@@ -21,7 +21,7 @@ npm install
 Copy `.env` and fill in your keys, or create `.env.local`:
 
 ```env
-ANTHROPIC_API_KEY=sk-ant-...
+GOOGLE_API_KEY=your-google-ai-key
 SUPABASE_URL=http://localhost:54321
 SUPABASE_ANON_KEY=<see step 3>
 ```
@@ -108,7 +108,7 @@ pages/
     health.ts
   index.tsx
 lib/
-  claude.ts             # Claude API client + story generation
+  ai.ts                 # Gemini AI client + story generation
   supabase.ts           # Supabase client + DB queries
   stories.ts            # Story fetching and context building
   i18n.ts               # Hebrew translations helper
