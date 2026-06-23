@@ -11,6 +11,13 @@ export interface GenerateImageResponse {
   error?: string;
 }
 
+const STYLE_PREFIX =
+  "simple flat vector illustration, 2D minimalist cartoon, cute storybook drawing, solid colors, soft outlines, minimal detail, storybook style, flat shapes, child-friendly composition";
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse<GenerateImageResponse>
@@ -19,9 +26,11 @@ export default async function handler(
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
 
-  const hfToken = process.env.HF_KEY;
-  if (!hfToken) {
-    return res.status(500).json({ success: false, error: "Missing HF_KEY" });
+  const rawKey = process.env.GOOGLE_API_KEY ?? "";
+  // Google AI Studio sometimes prefixes keys with "AQ." — strip it
+  const apiKey = rawKey.startsWith("AQ.") ? rawKey.slice(3) : rawKey;
+  if (!apiKey) {
+    return res.status(500).json({ success: false, error: "Missing GOOGLE_API_KEY" });
   }
 
   const { prompt } = req.body as GenerateImageRequest;
@@ -29,34 +38,69 @@ export default async function handler(
     return res.status(400).json({ success: false, error: "Missing prompt" });
   }
 
-  console.log(`[generate-image] → ${prompt.slice(0, 120)}...`);
+  const model =
+    process.env.GOOGLE_IMAGE_MODEL ?? "gemini-2.0-flash-preview-image-generation";
+  const finalPrompt = `${STYLE_PREFIX} ${prompt}`;
 
-  try {
-    const response = await fetch(
-      process.env.HF_MODEL_URL ?? "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
-      {
+  console.log(`[generate-image] model=${model}`);
+  console.log(`[generate-image] PROMPT:\n${finalPrompt}`);
+
+  const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
+
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= 3; attempt++) {
+    try {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${hfToken}`,
           "Content-Type": "application/json",
+          "x-goog-api-key": apiKey,
         },
-        body: JSON.stringify({ inputs: prompt }),
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: finalPrompt }] }],
+          generationConfig: { responseModalities: ["IMAGE"] },
+        }),
+      });
+
+      const body = await response.json() as Record<string, unknown>;
+
+      if (!response.ok) {
+        const errMsg =
+          (body as { error?: { message?: string } }).error?.message ??
+          JSON.stringify(body).slice(0, 300);
+        throw new Error(`Gemini API ${response.status}: ${errMsg}`);
       }
-    );
 
-    if (!response.ok) {
-      const text = await response.text().catch(() => "(unreadable)");
-      throw new Error(`HF API ${response.status}: ${text.slice(0, 300)}`);
+      // Extract inlineData from the first image part
+      const candidates = (body as { candidates?: unknown[] }).candidates ?? [];
+      const parts =
+        (candidates[0] as { content?: { parts?: unknown[] } } | undefined)
+          ?.content?.parts ?? [];
+      const imagePart = parts.find(
+        (p): p is { inlineData: { data: string; mimeType: string } } =>
+          typeof (p as { inlineData?: unknown }).inlineData === "object"
+      );
+
+      if (!imagePart) {
+        throw new Error("Gemini returned no image in response");
+      }
+
+      const { data, mimeType } = imagePart.inlineData;
+      return res.status(200).json({ success: true, imageData: data, mimeType });
+    } catch (err) {
+      lastError = err;
+      const message = err instanceof Error ? err.message : String(err);
+
+      if (attempt < 3 && /503|loading|warm|timed out?|overload|demand|no image/i.test(message)) {
+        console.warn(`[generate-image] retrying (${attempt}/3) after: ${message}`);
+        await sleep(8000);
+        continue;
+      }
+
+      throw err;
     }
-
-    const buffer = await response.arrayBuffer();
-    const data = Buffer.from(buffer).toString("base64");
-    const mimeType = response.headers.get("content-type") ?? "image/jpeg";
-
-    return res.status(200).json({ success: true, imageData: data, mimeType });
-  } catch (err) {
-    const message = err instanceof Error ? err.message : "Image generation failed";
-    console.error("[generate-image] error:", message);
-    return res.status(500).json({ success: false, error: message });
   }
+
+  throw lastError;
 }

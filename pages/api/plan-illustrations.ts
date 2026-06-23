@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { GoogleGenerativeAI } from "@google/generative-ai";
+import { completeChat } from "@/lib/ai";
 
 const STYLE_SUFFIX =
   "watercolor children's book illustration, soft colored pencil linework, warm whimsical lighting, " +
@@ -25,11 +25,6 @@ export default async function handler(
     return res.status(405).json({ success: false, error: "Method not allowed" });
   }
 
-  const apiKey = process.env.GOOGLE_API_KEY;
-  if (!apiKey) {
-    return res.status(500).json({ success: false, error: "Missing GOOGLE_API_KEY" });
-  }
-
   const { title, pages } = req.body as PlanIllustrationsRequest;
 
   const sortedEntries = Object.entries(pages).sort(
@@ -42,12 +37,17 @@ export default async function handler(
 
   const pageNumbers = sortedEntries.map(([num]) => num);
 
-  const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite" });
+  const timeoutMs = Number(process.env.AI_REQUEST_TIMEOUT_MS);
+  const TIMEOUT_MS = Number.isFinite(timeoutMs) && timeoutMs > 0 ? timeoutMs : 120_000;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
   try {
-    const result = await model.generateContent(
-      `You are the art director for a Hebrew children's picture book called "${title}".
+    const raw = await completeChat({
+      messages: [
+        {
+          role: "user",
+          content: `You are the art director for a Hebrew children's picture book called "${title}".
 
 Here is the full story in Hebrew:
 ${storyText}
@@ -77,10 +77,13 @@ Return ONLY valid JSON, no extra text:
 {
   "cover": "...",
   ${pageNumbers.map((n) => `"${n}": "..."`).join(",\n  ")}
-}`
-    );
+}`,
+        },
+      ],
+      jsonMode: true,
+      signal: controller.signal,
+    });
 
-    const raw = result.response.text().trim();
     const jsonMatch = raw.match(/```(?:json)?\s*([\s\S]*?)```/) || raw.match(/(\{[\s\S]*\})/);
     const jsonStr = jsonMatch ? jsonMatch[1].trim() : raw;
 
@@ -93,5 +96,7 @@ Return ONLY valid JSON, no extra text:
     const message = err instanceof Error ? err.message : "Planning failed";
     console.error("[plan-illustrations] error:", message);
     return res.status(500).json({ success: false, error: message });
+  } finally {
+    clearTimeout(timer);
   }
 }
