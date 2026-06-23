@@ -127,7 +127,7 @@ export default async function handler(
     });
   }
 
-  // Generate story via Gemini
+  // Generate story via OpenRouter
   let generated;
   try {
     const aiStart = Date.now();

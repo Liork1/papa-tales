@@ -16,6 +16,12 @@ interface StoryData {
 
 type Phase = "form" | "generating" | "reading";
 type ImageState = string | "loading" | "error";
+type ErrorScenario = "offline" | "server" | "timeout" | "rate" | "content";
+
+interface AppError {
+  scenario: ErrorScenario;
+  savedPrompt: string;
+}
 
 // ── Constants ─────────────────────────────────────────────────────────────────
 
@@ -29,6 +35,18 @@ const AGE_GROUPS = [
 const STAGES = ["חושבים על הרעיון…", "כותבים בחרוזים…", "מציירים את האיורים…"];
 
 const ACCENT = { main: "#7a4fb0", deep: "#553089", soft: "#efe6fb", ink: "#4a2d72" };
+
+const ERROR_SCENARIOS: Record<ErrorScenario, {
+  glyph: string; title: string; message: string;
+  primaryLabel: string; primaryRetry: boolean;
+  secondaryLabel: string | null; showPrompt: boolean;
+}> = {
+  offline: { glyph: "☁", title: "אין חיבור לאינטרנט", message: "לא הצלחנו להתחבר לרשת בזמן יצירת הסיפור. בדקו את החיבור ונסו שוב.", primaryLabel: "נסו שוב", primaryRetry: true, secondaryLabel: "עריכת הבקשה", showPrompt: true },
+  server:  { glyph: "!", title: "משהו השתבש אצלנו", message: "נתקלנו בתקלה זמנית בזמן כתיבת הסיפור. זה כנראה זמני — אפשר לנסות שוב.", primaryLabel: "נסו שוב", primaryRetry: true, secondaryLabel: "עריכת הבקשה", showPrompt: true },
+  timeout: { glyph: "⏱", title: "זה לקח יותר מדי זמן", message: "יצירת הסיפור ארכה זמן רב מהצפוי. רוצים שננסה שוב?", primaryLabel: "נסו שוב", primaryRetry: true, secondaryLabel: "עריכת הבקשה", showPrompt: true },
+  rate:    { glyph: "⋯", title: "יש כרגע הרבה מבקשי סיפורים", message: "השירות עמוס לרגע. נסו שוב בעוד מספר שניות — שווה לחכות.", primaryLabel: "נסו שוב", primaryRetry: true, secondaryLabel: null, showPrompt: false },
+  content: { glyph: "✎", title: "לא הצלחנו ליצור סיפור מהבקשה הזו", message: "אפשר לנסות לנסח את הבקשה קצת אחרת או להוסיף פרטים, וננסה שוב ביחד.", primaryLabel: "עריכת הבקשה", primaryRetry: false, secondaryLabel: null, showPrompt: true },
+};
 
 // 6 scene gradients cycling per page index
 const SCENES = [
@@ -58,6 +76,15 @@ const MOCK_STORY: StoryData = {
 
 function getScene(idx: number) {
   return SCENES[idx % SCENES.length];
+}
+
+// Maps any page key to the "representative" key for its 3-page group.
+// Pages 0-2 share the page-0 image, pages 3-5 share the page-3 image, etc.
+function getImageKey(pageKey: string, sortedPageKeys: string[]): string {
+  if (pageKey === "cover") return "cover";
+  const idx = sortedPageKeys.indexOf(pageKey);
+  if (idx === -1) return pageKey;
+  return sortedPageKeys[Math.floor(idx / 3) * 3] ?? sortedPageKeys[0];
 }
 
 async function fetchImage(prompt: string): Promise<string | null> {
@@ -90,7 +117,7 @@ const Home: NextPage = () => {
   const [cw, setCw] = useState(480);
   const [story, setStory] = useState<StoryData | null>(null);
   const [images, setImages] = useState<Record<string, ImageState>>({});
-  const [error, setError] = useState<string | null>(null);
+  const [appError, setAppError] = useState<AppError | null>(null);
   const [demoMode, setDemoMode] = useState(false);
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -194,11 +221,12 @@ const Home: NextPage = () => {
 
   const handleGenerate = async () => {
     if (prompt.trim().length < 10) return;
-    setError(null);
+    setAppError(null);
     setPhase("generating");
     setStage(0);
     setDemoMode(false);
 
+    const savedPrompt = prompt.trim();
     let s = 0;
     timerRef.current = setInterval(() => {
       s++;
@@ -209,14 +237,20 @@ const Home: NextPage = () => {
       const res = await fetch("/api/generate-story", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: prompt.trim(), ageGroup }),
+        body: JSON.stringify({ prompt: savedPrompt, ageGroup }),
       });
       const data: GenerateStoryResponse = await res.json();
 
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
 
       if (!data.success || !data.data) {
-        throw new Error(data.error?.message ?? "שגיאה ביצירת הסיפור");
+        const code = data.error?.code ?? "";
+        let scenario: ErrorScenario = "server";
+        if (code === "RATE_LIMIT_EXCEEDED") scenario = "rate";
+        else if (code === "INVALID_INPUT") scenario = "content";
+        setAppError({ scenario, savedPrompt });
+        setPhase("form");
+        return;
       }
 
       const result: StoryData = {
@@ -231,16 +265,19 @@ const Home: NextPage = () => {
       setCurrentPage(0);
       setPhase("reading");
 
-      // Load images 2 at a time using pre-planned prompts
-      const keys = Object.keys(data.data.pages).sort((a, b) => Number(a) - Number(b));
-      const allKeys = ["cover", ...keys];
-      setImages(Object.fromEntries(allKeys.map((k) => [k, "loading" as ImageState])));
+      // Generate 1 image per 3 story pages to reduce cost/latency
+      const pageKeys = Object.keys(data.data.pages).sort((a, b) => Number(a) - Number(b));
+      const imageKeys = [
+        "cover",
+        ...pageKeys.filter((_, i) => i % 3 === 0),
+      ];
+      setImages(Object.fromEntries(imageKeys.map((k) => [k, "loading" as ImageState])));
 
       (async () => {
         const prompts = result.illustratedStory;
-        for (let i = 0; i < allKeys.length; i += 2) {
+        for (let i = 0; i < imageKeys.length; i += 2) {
           await Promise.all(
-            allKeys.slice(i, i + 2).map((key) => {
+            imageKeys.slice(i, i + 2).map((key) => {
               const p = prompts[key];
               return p ? loadImage(key, p) : Promise.resolve();
             })
@@ -249,9 +286,21 @@ const Home: NextPage = () => {
       })();
     } catch (err) {
       if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-      setError(err instanceof Error ? err.message : "שגיאה לא צפויה");
+      let scenario: ErrorScenario = "server";
+      if (typeof navigator !== "undefined" && !navigator.onLine) scenario = "offline";
+      setAppError({ scenario, savedPrompt });
       setPhase("form");
     }
+  };
+
+  const handleRetry = () => {
+    setAppError(null);
+    handleGenerate();
+  };
+
+  const handleEditPrompt = () => {
+    setAppError(null);
+    setPhase("form");
   };
 
   const handleDemo = () => {
@@ -292,6 +341,7 @@ const Home: NextPage = () => {
   // Derived values
   const isCover = currentPage === 0;
   const pageKey = isCover ? "cover" : sortedPageKeys[currentPage - 1];
+  const imageKey = getImageKey(pageKey, sortedPageKeys);
   const sc = getScene(currentPage);
   const imageState = images[pageKey];
   const hasRealImage =
@@ -325,6 +375,18 @@ const Home: NextPage = () => {
           className={styles.realImage}
         />
       )}
+      {imageState === "error" && !isCover && (
+        <div className={styles.imageErrorOverlay}>
+          <span className={styles.imageErrorIcon}>🎨</span>
+          <span className={styles.imageErrorText}>האיור לא נטען</span>
+          <button
+            className={styles.imageRetryBtn}
+            onClick={() => story && loadImage(imageKey, story.illustratedStory[imageKey])}
+          >
+            ↻ טעינה מחדש
+          </button>
+        </div>
+      )}
       {showTag && <span className={styles.demoTag}>איור · דמו</span>}
     </>
   );
@@ -339,14 +401,41 @@ const Home: NextPage = () => {
 
       <div ref={rootRef} className={styles.wrapper}>
 
+        {/* ── Error card (replaces form on failure) ── */}
+        {phase === "form" && appError && (() => {
+          const sc = ERROR_SCENARIOS[appError.scenario];
+          return (
+            <div className={styles.errorCard}>
+              <div className={styles.errorIcon}>{sc.glyph}</div>
+              <h2 className={styles.errorTitle}>{sc.title}</h2>
+              <p className={styles.errorMessage}>{sc.message}</p>
+              {sc.showPrompt && appError.savedPrompt && (
+                <div className={styles.savedPromptBox}>
+                  <div className={styles.savedPromptLabel}>הבקשה שלכם נשמרה</div>
+                  <div className={styles.savedPromptText}>{appError.savedPrompt}</div>
+                </div>
+              )}
+              <button
+                className={styles.errorPrimaryBtn}
+                onClick={sc.primaryRetry ? handleRetry : handleEditPrompt}
+              >
+                {sc.primaryLabel}
+              </button>
+              {sc.secondaryLabel && (
+                <button className={styles.errorSecondaryBtn} onClick={handleEditPrompt}>
+                  {sc.secondaryLabel}
+                </button>
+              )}
+            </div>
+          );
+        })()}
+
         {/* ── Form ── */}
-        {phase === "form" && (
+        {phase === "form" && !appError && (
           <div className={styles.formCard}>
             <span className={styles.moonEmoji}>🌙</span>
             <h1 className={styles.appTitle}>אבא סיפור</h1>
             <p className={styles.appSubtitle}>סיפור ילדים מחורז ומאויר — תוך רגע</p>
-
-            {error && <div className={styles.errorBox}>{error}</div>}
 
             <div className={styles.field}>
               <label className={styles.label}>על מה הסיפור?</label>

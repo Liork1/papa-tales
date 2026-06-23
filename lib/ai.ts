@@ -1,17 +1,128 @@
-import { GoogleGenerativeAI, GenerativeModel } from "@google/generative-ai";
 import type { Story } from "@/types/stories";
-import { logger } from "@/lib/logger";
 
-let genAI: GoogleGenerativeAI | null = null;
+type ChatRole = "system" | "user" | "assistant";
 
-export function initGenerativeModel(): GenerativeModel {
-  if (!genAI) {
-    const apiKey = process.env.GOOGLE_API_KEY;
-    if (!apiKey) throw new Error("Missing GOOGLE_API_KEY");
-    genAI = new GoogleGenerativeAI(apiKey);
+interface ChatMessage {
+  role: ChatRole;
+  content: string;
+}
+
+interface OpenRouterContentPart {
+  type?: string;
+  text?: string;
+}
+
+interface OpenRouterChatResponse {
+  choices?: Array<{
+    message?: {
+      content?: string | OpenRouterContentPart[];
+    };
+  }>;
+  error?: {
+    code?: string | number;
+    message?: string;
+  };
+  model?: string;
+  usage?: {
+    prompt_tokens?: number;
+    completion_tokens?: number;
+    total_tokens?: number;
+  };
+}
+
+interface CompleteChatOptions {
+  messages: ChatMessage[];
+  maxTokens?: number;
+  temperature?: number;
+  jsonMode?: boolean;
+  signal?: AbortSignal;
+}
+
+const OPENROUTER_BASE_URL =
+  process.env.OPENROUTER_BASE_URL ?? "https://openrouter.ai/api/v1";
+const DEFAULT_MODEL = "google/gemini-2.5-flash-lite";
+
+function getOpenRouterModel(): string {
+  return process.env.OPENROUTER_MODEL ?? DEFAULT_MODEL;
+}
+
+function getAiRequestTimeoutMs(): number {
+  const value = Number(process.env.AI_REQUEST_TIMEOUT_MS);
+  return Number.isFinite(value) && value > 0 ? value : 120_000;
+}
+
+function getOpenRouterHeaders(): Record<string, string> {
+  const apiKey = process.env.OPENROUTER_API_KEY;
+  if (!apiKey) throw new Error("Missing OPENROUTER_API_KEY");
+
+  const headers: Record<string, string> = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  };
+
+  if (process.env.OPENROUTER_SITE_URL) {
+    headers["HTTP-Referer"] = process.env.OPENROUTER_SITE_URL;
   }
-  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
-  return genAI.getGenerativeModel({ model });
+
+  if (process.env.OPENROUTER_APP_NAME) {
+    headers["X-Title"] = process.env.OPENROUTER_APP_NAME;
+  }
+
+  return headers;
+}
+
+function normalizeMessageContent(
+  content: string | OpenRouterContentPart[] | undefined
+): string {
+  if (typeof content === "string") return content;
+  if (Array.isArray(content)) {
+    return content
+      .map((part) => (part.type === "text" || !part.type ? part.text ?? "" : ""))
+      .join("");
+  }
+  return "";
+}
+
+export async function completeChat({
+  messages,
+  maxTokens,
+  temperature = 0.7,
+  jsonMode = false,
+  signal,
+}: CompleteChatOptions): Promise<string> {
+  const response = await fetch(`${OPENROUTER_BASE_URL}/chat/completions`, {
+    method: "POST",
+    headers: getOpenRouterHeaders(),
+    signal,
+    body: JSON.stringify({
+      model: getOpenRouterModel(),
+      messages,
+      temperature,
+      ...(maxTokens ? { max_tokens: maxTokens } : {}),
+      ...(jsonMode ? { response_format: { type: "json_object" } } : {}),
+    }),
+  });
+
+  const bodyText = await response.text();
+  let body: OpenRouterChatResponse | undefined;
+
+  try {
+    body = bodyText ? (JSON.parse(bodyText) as OpenRouterChatResponse) : undefined;
+  } catch {
+    body = undefined;
+  }
+
+  if (!response.ok) {
+    const message = body?.error?.message || bodyText || response.statusText;
+    throw new Error(`OpenRouter request failed (${response.status}): ${message}`);
+  }
+
+  const text = normalizeMessageContent(body?.choices?.[0]?.message?.content);
+  if (!text.trim()) {
+    throw new Error("OpenRouter returned an empty response");
+  }
+
+  return text;
 }
 
 function buildSystemPrompt(
@@ -114,25 +225,25 @@ export async function generateStory(
 ): Promise<GeneratedStory> {
   const { prompt, inspirationalStories, ageGroup = "4-6", maxTokens = 15000 } = options;
 
-  const model = initGenerativeModel();
   const systemPrompt = buildSystemPrompt(inspirationalStories, ageGroup);
 
-  const TIMEOUT_MS = 60_000;
+  const TIMEOUT_MS = getAiRequestTimeoutMs();
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
 
-  console.log(`\n${"─".repeat(60)}\n[GEMINI PROMPT] ${new Date().toISOString()}\n${"─".repeat(60)}\n[SYSTEM]\n${systemPrompt}\n\n[USER]\n${prompt}\n${"─".repeat(60)}\n`);
+  console.log(`\n${"─".repeat(60)}\n[OPENROUTER PROMPT] ${new Date().toISOString()} model=${getOpenRouterModel()}\n${"─".repeat(60)}\n[SYSTEM]\n${systemPrompt}\n\n[USER]\n${prompt}\n${"─".repeat(60)}\n`);
 
   let text: string;
   try {
-    const result = await model.generateContent(
-      {
-        systemInstruction: systemPrompt,
-        contents: [{ role: "user", parts: [{ text: prompt }] }],
-        generationConfig: { maxOutputTokens: maxTokens, responseMimeType: "application/json" },
-      },
-    );
-    text = result.response.text();
+    text = await completeChat({
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: prompt },
+      ],
+      maxTokens,
+      jsonMode: true,
+      signal: controller.signal,
+    });
   } catch (err) {
     if ((err as Error).name === "AbortError") throw new Error("שגיאה בעיבוד בקשתך");
     throw err;
@@ -140,7 +251,7 @@ export async function generateStory(
     clearTimeout(timer);
   }
 
-  console.log(`\n${"─".repeat(60)}\n[GEMINI RAW RESPONSE]\n${"─".repeat(60)}\n${text}\n${"─".repeat(60)}\n`);
+  console.log(`\n${"─".repeat(60)}\n[OPENROUTER RAW RESPONSE]\n${"─".repeat(60)}\n${text}\n${"─".repeat(60)}\n`);
   return parseStoryResponse(text);
 }
 
