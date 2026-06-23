@@ -33,7 +33,7 @@ export default async function handler(
 
   try {
     const response = await fetch(
-      "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
+      process.env.HF_MODEL_URL ?? "https://router.huggingface.co/hf-inference/models/black-forest-labs/FLUX.1-schnell",
       {
         method: "POST",
         headers: {

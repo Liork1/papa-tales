@@ -43,7 +43,7 @@ export default async function handler(
   const pageNumbers = sortedEntries.map(([num]) => num);
 
   const genAI = new GoogleGenerativeAI(apiKey);
-  const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+  const model = genAI.getGenerativeModel({ model: process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite" });
 
   try {
     const result = await model.generateContent(

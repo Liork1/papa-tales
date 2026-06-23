@@ -14,6 +14,7 @@ export interface GenerateStoryResponse {
     wordCount: number;
     generatedAt: string;
     inspiration?: string[];
+    illustratedStory: Record<string, string>;
   };
   error?: {
     code: string;

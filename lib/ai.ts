@@ -10,7 +10,8 @@ export function initGenerativeModel(): GenerativeModel {
     if (!apiKey) throw new Error("Missing GOOGLE_API_KEY");
     genAI = new GoogleGenerativeAI(apiKey);
   }
-  return genAI.getGenerativeModel({ model: "gemini-2.5-flash-lite" });
+  const model = process.env.GEMINI_MODEL ?? "gemini-2.5-flash-lite";
+  return genAI.getGenerativeModel({ model });
 }
 
 function buildSystemPrompt(
@@ -28,30 +29,53 @@ function buildSystemPrompt(
     ? `children aged ${ageGroup} — slightly richer language, short vivid descriptions, occasional new interesting words are welcome`
     : `very young children (up to age 6) — short words, short sentences, very simple language`;
 
-  return `You are an expert Hebrew children's story writer. Your task is to create a fun, rhyming Hebrew story divided into short pages.
+  const STYLE_SUFFIX = "watercolor children's book illustration, soft colored pencil linework, warm whimsical lighting, pastel color palette with warm greens and blues, professional picture book art style, NO text, NO letters, NO words, NO signs anywhere in the image";
 
-ALL OUTPUT MUST BE IN HEBREW (right-to-left, no vowel marks / nikud).
+  return `You are an expert Hebrew children's story writer AND art director for a picture book.
+Your task is TWO things in ONE response:
+  A) Write a fun, rhyming Hebrew story divided into short pages.
+  B) Write ONE English illustration prompt per page (plus a cover prompt).
+
+═══ PART A: STORY ═══
+
+ALL STORY TEXT MUST BE IN HEBREW (right-to-left, no vowel marks / nikud).
 
 Target audience: ${audienceNote}
 
-Hard requirements:
+Story requirements:
 1. Language must match age group ${ageGroup} as described above.
-2. RHYMING — this is the most critical requirement. Choose one scheme (AABB or ABAB) and apply it consistently on every page:
+2. RHYMING — most critical. Choose one scheme (AABB or ABAB) and apply consistently on every page:
    - AABB: line 1 rhymes with line 2, line 3 rhymes with line 4
    - ABAB: line 1 rhymes with line 3, line 2 rhymes with line 4
-   - A true rhyme = the final syllable sounds IDENTICAL when spoken aloud. Example: sameach / poreach ✓ | sameach / gadol ✗
-   - Before writing each page, say the line endings aloud — do they actually sound the same?
-   - No weak rhymes: a word with itself, or only an inflection change (e.g. halach / lalechet) is NOT a rhyme.
+   - True rhyme = final syllable sounds IDENTICAL aloud. Example: sameach / poreach ✓ | sameach / gadol ✗
+   - No weak rhymes: same word or only an inflection change is NOT a rhyme.
 3. EXACTLY ${pageRange} pages — no more, no less.
 4. Each page: maximum ${maxWordsPerPage} words.${olderKids ? " Small enriching details are welcome." : " Short pages = happy kids."}
 5. End with a simple positive lesson.
 6. Draw themes from the inspirational stories below.
-7. Write WITHOUT nikud (vowel marks) — plain Hebrew only.
+7. Write WITHOUT nikud — plain Hebrew only.
 
 Inspirational stories:
 ${storiesContext}
 
-Your response must be pure JSON only (no extra text). Example structure (replace all values with real Hebrew content):
+═══ PART B: ILLUSTRATION PROMPTS ═══
+
+After writing the full story, plan ONE English illustration prompt for each page plus a cover.
+
+Illustration rules:
+1. Read the entire story first. Identify each character's SPECIES/TYPE (human child, cartoon pig, superhero, etc.)
+   and lock that visual description — reuse it IDENTICALLY in every prompt.
+2. NEVER change a character's species or appearance between pages.
+3. For well-known characters (Peppa Pig, Spider-Man, etc.), use their EXACT name.
+4. Only include characters PRESENT in that specific page's text.
+5. Describe the scene happening on that page (action, setting, mood). 2-3 sentences only.
+6. COVER prompt: main characters together, warm and inviting mood — no specific scene.
+7. Do NOT put any text, titles, letters, or signs in any image.
+8. Every prompt must end with exactly: "${STYLE_SUFFIX}"
+
+═══ JSON OUTPUT ═══
+
+Return ONLY valid JSON — no extra text. Example structure:
 {
   "title": "שם הסיפור בעברית",
   "pages": {
@@ -60,7 +84,13 @@ Your response must be pure JSON only (no extra text). Example structure (replace
     "${pageRange.split("-")[1]}": "תוכן העמוד האחרון — עד ${maxWordsPerPage} מילים"
   },
   "rhymeScheme": "AABB",
-  "themes": ["חברות", "הרפתקה"]
+  "themes": ["חברות", "הרפתקה"],
+  "illustrated_story": {
+    "cover": "Main characters together in a warm setting, cheerful expressions, inviting mood. ${STYLE_SUFFIX}",
+    "1": "Scene description for page 1 with consistent character appearances. ${STYLE_SUFFIX}",
+    "2": "Scene description for page 2. ${STYLE_SUFFIX}",
+    "${pageRange.split("-")[1]}": "Scene description for the last page. ${STYLE_SUFFIX}"
+  }
 }`;
 }
 
@@ -76,6 +106,7 @@ export interface GeneratedStory {
   title: string;
   rhymeScheme: string;
   themes?: string[];
+  illustratedStory: Record<string, string>;
 }
 
 export async function generateStory(
@@ -132,8 +163,16 @@ export function parseStoryResponse(response: string): GeneratedStory {
   const title = parsed.title as string;
   const rhymeScheme = parsed.rhymeScheme as string;
   const themes = parsed.themes as string[] | undefined;
+  const illustratedStory = parsed.illustrated_story as Record<string, string> | undefined;
 
   if (!story || !title || !rhymeScheme) throw new Error("שגיאה בעיבוד התשובה");
+  if (!illustratedStory || Object.keys(illustratedStory).length === 0) throw new Error("שגיאה בעיבוד התשובה");
 
-  return { pages: story, title, rhymeScheme, themes };
+  const STYLE_SUFFIX = "watercolor children's book illustration, soft colored pencil linework, warm whimsical lighting, pastel color palette with warm greens and blues, professional picture book art style, NO text, NO letters, NO words, NO signs anywhere in the image";
+  const normalizedPrompts: Record<string, string> = {};
+  for (const [key, prompt] of Object.entries(illustratedStory)) {
+    normalizedPrompts[key] = prompt.endsWith(STYLE_SUFFIX) ? prompt : `${prompt} ${STYLE_SUFFIX}`;
+  }
+
+  return { pages: story, title, rhymeScheme, themes, illustratedStory: normalizedPrompts };
 }
