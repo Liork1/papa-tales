@@ -174,6 +174,7 @@ export default async function handler(
       wordCount,
       generatedAt: new Date().toISOString(),
       inspiration: inspirationalStories.map((s) => s.theme).filter((t): t is string => Boolean(t)),
+      illustratedStory: generated.illustratedStory,
     },
   });
 }

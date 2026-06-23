@@ -9,6 +9,7 @@ interface StoryData {
   pages: Record<string, string>;
   rhymeScheme: string;
   wordCount: number;
+  illustratedStory: Record<string, string>;
 }
 
 type AppPhase = "form" | "generating" | "reading";
@@ -21,23 +22,6 @@ const AGE_GROUPS = [
   { value: "6-8", label: "גיל 6–8" },
   { value: "8-10", label: "גיל 8–10" },
 ];
-
-async function planIllustrations(
-  title: string,
-  pages: Record<string, string>
-): Promise<Record<string, string> | null> {
-  try {
-    const res = await fetch("/api/plan-illustrations", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, pages }),
-    });
-    const data = await res.json();
-    return data.success ? data.prompts : null;
-  } catch {
-    return null;
-  }
-}
 
 async function fetchImage(prompt: string): Promise<string | null> {
   try {
@@ -103,6 +87,7 @@ const Home: NextPage = () => {
         pages: data.data.pages,
         rhymeScheme: data.data.rhymeScheme,
         wordCount: data.data.wordCount,
+        illustratedStory: data.data.illustratedStory,
       };
 
       setStory(result);
@@ -110,25 +95,17 @@ const Home: NextPage = () => {
       setCurrentPage(0);
       setPhase("reading");
 
-      // Step 2: Plan ALL illustration prompts in one Gemini call (character consistency)
+      // Step 2: Send each pre-planned prompt to FLUX, 2 at a time
       (async () => {
         const sortedKeys = Object.keys(data.data!.pages).sort(
           (a, b) => Number(a) - Number(b)
         );
         const allKeys = ["cover", ...sortedKeys];
+        const prompts = result.illustratedStory;
 
         // Mark all as loading
         setImages(Object.fromEntries(allKeys.map((k) => [k, "loading"])));
 
-        const prompts = await planIllustrations(result.title, result.pages);
-
-        if (!prompts) {
-          // Planning failed — mark all as error
-          setImages(Object.fromEntries(allKeys.map((k) => [k, "error"])));
-          return;
-        }
-
-        // Step 3: Send each prompt to FLUX, 2 at a time
         for (let i = 0; i < allKeys.length; i += 2) {
           await Promise.all(
             allKeys.slice(i, i + 2).map((key) => {
