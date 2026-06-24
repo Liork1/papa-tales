@@ -5,6 +5,7 @@ import { getContextualStories } from "@/lib/stories";
 import { t } from "@/lib/i18n";
 import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
+import { createServerClient } from "@supabase/ssr";
 
 const VALID_AGE_GROUPS = ["2-4", "4-6", "6-8", "8-10"] as const;
 
@@ -70,6 +71,53 @@ export default async function handler(
       error: { code: "METHOD_NOT_ALLOWED", message: t("api.errors.methodNotAllowed") },
     });
   }
+
+  // ── Tier enforcement ──────────────────────────────────────────────────────
+  const supabase = createServerClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
+    {
+      cookies: {
+        getAll: () => Object.entries(req.cookies).map(([name, value]) => ({ name, value: value ?? "" })),
+        setAll: (cookies) => cookies.forEach(({ name, value }) => {
+          res.setHeader("Set-Cookie", `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`);
+        }),
+      },
+    }
+  );
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const useCredit = !!(req.body as GenerateStoryRequest).useCredit;
+  let usedCredit = false;
+
+  if (user) {
+    const [profileRes, creditsRes] = await Promise.all([
+      supabase.from("user_profiles").select("stories_generated").eq("id", user.id).single(),
+      supabase.from("user_credits").select("credits_remaining").eq("user_id", user.id).single(),
+    ]);
+    const storiesGenerated: number = profileRes.data?.stories_generated ?? 0;
+    const creditsRemaining: number = creditsRes.data?.credits_remaining ?? 0;
+
+    if (useCredit && creditsRemaining > 0) {
+      // Deduct credit immediately
+      await supabase
+        .from("user_credits")
+        .update({ credits_remaining: creditsRemaining - 1, updated_at: new Date().toISOString() })
+        .eq("user_id", user.id);
+      usedCredit = true;
+    } else if (!useCredit && storiesGenerated >= 5) {
+      return res.status(402).json({
+        success: false,
+        error: { code: "QUOTA_EXCEEDED", message: "ניצלתם את 5 הסיפורים החינמיים" },
+      });
+    } else if (useCredit && creditsRemaining <= 0) {
+      return res.status(402).json({
+        success: false,
+        error: { code: "NO_CREDITS", message: "אין קרדיטים זמינים" },
+      });
+    }
+  }
+  // ─────────────────────────────────────────────────────────────────────────
 
   // Rate limiting
   const ip = getClientIp(req);
@@ -165,6 +213,22 @@ export default async function handler(
     duration_ms: Date.now() - startTime,
   });
 
+  // Post-generation: increment story count and record the story
+  if (user) {
+    await Promise.all([
+      (async () => {
+        const { data } = await supabase.from("user_profiles").select("stories_generated").eq("id", user.id).single();
+        await supabase.from("user_profiles").update({ stories_generated: (data?.stories_generated ?? 0) + 1 }).eq("id", user.id);
+      })(),
+      supabase.from("user_generated_stories").insert({
+        user_id: user.id,
+        used_credit: usedCredit,
+        prompt: validRequest.prompt,
+        title: generated.title,
+      }),
+    ]);
+  }
+
   return res.status(200).json({
     success: true,
     data: {
@@ -175,6 +239,7 @@ export default async function handler(
       generatedAt: new Date().toISOString(),
       inspiration: inspirationalStories.map((s) => s.theme).filter((t): t is string => Boolean(t)),
       illustratedStory: generated.illustratedStory,
+      usedCredit,
     },
   });
 }

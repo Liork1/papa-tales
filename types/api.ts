@@ -3,6 +3,7 @@ export interface GenerateStoryRequest {
   ageGroup?: "2-4" | "4-6" | "6-8" | "8-10";
   theme?: string;
   maxLength?: number;
+  useCredit?: boolean;
 }
 
 export interface GenerateStoryResponse {
@@ -15,6 +16,7 @@ export interface GenerateStoryResponse {
     generatedAt: string;
     inspiration?: string[];
     illustratedStory: Record<string, string>;
+    usedCredit?: boolean;
   };
   error?: {
     code: string;

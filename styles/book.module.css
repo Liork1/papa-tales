@@ -23,7 +23,7 @@
 .formCard {
   background: #fff8ef;
   border-radius: 26px;
-  padding: 2.4rem 2.1rem 2.1rem;
+  padding: 1.3rem 2.1rem 2.1rem;
   width: min(460px, 100%);
   box-shadow: 0 30px 70px rgba(10,5,30,.55);
   animation: ptRise .4s ease both;
@@ -715,4 +715,100 @@
   font-size: .8rem;
   color: rgba(245,235,220,.6);
   font-weight: 500;
+}
+
+/* ── Business / paywall additions ── */
+
+/* Locked inner-image overlay */
+.lockedImageOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(160deg, #2a2152 0%, #3a2d6e 100%);
+  z-index: 2;
+}
+
+.lockedImageContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: .7rem;
+  padding: 1rem;
+  text-align: center;
+}
+
+.lockedImageIcon {
+  width: 54px;
+  height: 54px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3d27a, #dca83f);
+  color: #5a3d0a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.4rem;
+}
+
+.lockedImageTitle {
+  font-family: 'Rubik', sans-serif;
+  font-weight: 700;
+  color: #fdf3df;
+  font-size: .95rem;
+}
+
+.lockedImageSub {
+  font-size: .8rem;
+  color: rgba(245,235,220,.65);
+  max-width: 200px;
+  line-height: 1.5;
+}
+
+.lockedImageBtn {
+  padding: .6rem 1.3rem;
+  border: none;
+  border-radius: 99px;
+  color: #5a3d0a;
+  font-family: 'Rubik', sans-serif;
+  font-size: .9rem;
+  font-weight: 700;
+  cursor: pointer;
+  background: linear-gradient(135deg, #f3d27a, #dca83f);
+  box-shadow: 0 6px 16px rgba(217,168,63,.4);
+}
+
+/* Audio lock badge on play button */
+.audioLockBadge {
+  position: absolute;
+  bottom: -3px;
+  left: -3px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #f3d27a, #dca83f);
+  color: #5a3d0a;
+  font-size: .72rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 3px 8px rgba(0,0,0,.3);
+  pointer-events: none;
+}
+
+/* Keyframes used by modals */
+@keyframes bpRise {
+  from { opacity: 0; transform: translateY(12px); }
+  to   { opacity: 1; transform: none; }
+}
+
+@keyframes bpFloat {
+  0%, 100% { transform: translateY(0); }
+  50%       { transform: translateY(-7px); }
+}
+
+@keyframes bpPop {
+  0%   { transform: scale(.6); opacity: 0; }
+  60%  { transform: scale(1.08); }
+  100% { transform: scale(1); opacity: 1; }
 }
