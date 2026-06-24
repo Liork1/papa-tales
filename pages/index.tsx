@@ -1,8 +1,13 @@
 import type { NextPage } from "next";
 import Head from "next/head";
 import { useState, useRef, useEffect, useCallback } from "react";
+import { useRouter } from "next/router";
 import styles from "@/styles/book.module.css";
 import type { GenerateStoryResponse } from "@/types/api";
+import { useUserContext } from "@/lib/user-context";
+import { signOut } from "@/lib/auth";
+import UpgradeModal from "@/components/UpgradeModal";
+import SuccessModal from "@/components/SuccessModal";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -107,6 +112,12 @@ async function fetchImage(prompt: string): Promise<string | null> {
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const Home: NextPage = () => {
+  const router = useRouter();
+  const { user, tier, credits, profile, refresh } = useUserContext();
+  const [showUpgradeModal, setShowUpgradeModal] = useState<null | "creditsWall" | "buySheet">(null);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [storyUsedCredit, setStoryUsedCredit] = useState(false);
+
   const [phase, setPhase] = useState<Phase>("form");
   const [prompt, setPrompt] = useState("");
   const [ageGroup, setAgeGroup] = useState("4-6");
@@ -204,6 +215,19 @@ const Home: NextPage = () => {
     stopSpeech();
   }, []);
 
+  // Detect successful payment redirect (?payment=success)
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const url = new URL(window.location.href);
+    if (url.searchParams.get("payment") === "success") {
+      setShowSuccessModal(true);
+      refresh();
+      url.searchParams.delete("payment");
+      window.history.replaceState({}, "", url.toString());
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   function stopSpeech() {
     try {
       if (typeof window !== "undefined" && window.speechSynthesis) {
@@ -221,6 +245,21 @@ const Home: NextPage = () => {
 
   const handleGenerate = async () => {
     if (prompt.trim().length < 10) return;
+
+    // ── Tier gate ────────────────────────────────────────────────────────────
+    const guestCount = parseInt(
+      (typeof localStorage !== "undefined" ? localStorage.getItem("papa_tales_guest_count") : null) ?? "0"
+    );
+    if (!user && guestCount >= 1) { router.push("/auth?mode=register"); return; }
+    if (user && tier === "free" && (profile?.stories_generated ?? 0) >= 5) {
+      setShowUpgradeModal("creditsWall"); return;
+    }
+    if (user && tier === "paid" && credits <= 0) {
+      setShowUpgradeModal("creditsWall"); return;
+    }
+    const useCredit = !!user && credits > 0;
+    // ─────────────────────────────────────────────────────────────────────────
+
     setAppError(null);
     setPhase("generating");
     setStage(0);
@@ -237,7 +276,7 @@ const Home: NextPage = () => {
       const res = await fetch("/api/generate-story", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: savedPrompt, ageGroup }),
+        body: JSON.stringify({ prompt: savedPrompt, ageGroup, useCredit }),
       });
       const data: GenerateStoryResponse = await res.json();
 
@@ -261,16 +300,24 @@ const Home: NextPage = () => {
         illustratedStory: data.data.illustratedStory,
       };
 
+      const creditStory = data.data.usedCredit ?? false;
+      setStoryUsedCredit(creditStory);
       setStory(result);
       setCurrentPage(0);
       setPhase("reading");
 
-      // Generate 1 image per 3 story pages to reduce cost/latency
+      // Guest: increment localStorage counter
+      if (!user) {
+        localStorage.setItem("papa_tales_guest_count", "1");
+      }
+      // Refresh credits/profile in background
+      refresh();
+
+      // Tier-aware image fan-out: credit = cover + all pages; free/guest = cover only
       const pageKeys = Object.keys(data.data.pages).sort((a, b) => Number(a) - Number(b));
-      const imageKeys = [
-        "cover",
-        ...pageKeys.filter((_, i) => i % 3 === 0),
-      ];
+      const imageKeys = creditStory
+        ? ["cover", ...pageKeys]
+        : ["cover"];
       setImages(Object.fromEntries(imageKeys.map((k) => [k, "loading" as ImageState])));
 
       (async () => {
@@ -321,6 +368,7 @@ const Home: NextPage = () => {
   };
 
   const handleSpeak = () => {
+    if (!storyUsedCredit) { setShowUpgradeModal("buySheet"); return; }
     if (typeof window === "undefined" || !window.speechSynthesis) return;
     if (speaking) { stopSpeech(); return; }
     if (!story) return;
@@ -387,6 +435,22 @@ const Home: NextPage = () => {
           </button>
         </div>
       )}
+      {/* Locked inner-image overlay for free/guest stories */}
+      {!storyUsedCredit && !isCover && !demoMode && imageState === undefined && (
+        <div className={styles.lockedImageOverlay}>
+          <div className={styles.lockedImageContent}>
+            <div className={styles.lockedImageIcon}>🔒</div>
+            <div className={styles.lockedImageTitle}>איור מלא לכל עמוד</div>
+            <div className={styles.lockedImageSub}>בסיפורי קרדיט כל עמוד מקבל איור משלו</div>
+            <button
+              className={styles.lockedImageBtn}
+              onClick={() => setShowUpgradeModal("buySheet")}
+            >
+              שדרגו · 5$
+            </button>
+          </div>
+        </div>
+      )}
       {showTag && <span className={styles.demoTag}>איור · דמו</span>}
     </>
   );
@@ -433,6 +497,16 @@ const Home: NextPage = () => {
         {/* ── Form ── */}
         {phase === "form" && !appError && (
           <div className={styles.formCard}>
+            {/* ── User identity + quota header ── */}
+            <FormHeader
+              user={user}
+              tier={tier}
+              credits={credits}
+              profile={profile}
+              onSignOut={async () => { await signOut(); refresh(); }}
+              onUpgrade={() => setShowUpgradeModal("creditsWall")}
+            />
+
             <span className={styles.moonEmoji}>🌙</span>
             <h1 className={styles.appTitle}>אבא סיפור</h1>
             <p className={styles.appSubtitle}>סיפור ילדים מחורז ומאויר — תוך רגע</p>
@@ -503,11 +577,22 @@ const Home: NextPage = () => {
                 opacity: canGen ? 1 : 0.7,
               }}
             >
-              צרו את הסיפור ✨
+              {tier === "paid" && credits > 0 ? "צרו סיפור מלא ✨" : "צרו סיפור בסיסי ✨"}
             </button>
 
             {!canGen && (
               <p className={styles.lowCharsHint}>כתבו לפחות 10 תווים כדי להתחיל</p>
+            )}
+            {canGen && tier !== "paid" && (
+              <p style={{ textAlign: "center", fontSize: ".76rem", color: "#b6a48d", marginTop: ".6rem", lineHeight: 1.55 }}>
+                סיפור בסיסי — כריכה מאוירת בלבד, ללא הקראה.{" "}
+                <button
+                  onClick={() => setShowUpgradeModal("creditsWall")}
+                  style={{ background: "none", border: "none", color: "#b9842a", fontFamily: "'Rubik', sans-serif", fontSize: ".76rem", fontWeight: 700, cursor: "pointer", padding: 0 }}
+                >
+                  שדרגו לסיפור מלא ✦
+                </button>
+              </p>
             )}
 
             <button className={styles.demoLink} onClick={handleDemo}>
@@ -642,11 +727,18 @@ const Home: NextPage = () => {
                 className={styles.playBtn}
                 onClick={handleSpeak}
                 style={{
-                  background: speaking ? ACCENT.deep : ACCENT.main,
-                  boxShadow: `0 8px 20px ${ACCENT.main}66`,
+                  position: "relative",
+                  background: storyUsedCredit
+                    ? (speaking ? ACCENT.deep : ACCENT.main)
+                    : "rgba(255,255,255,.12)",
+                  color: storyUsedCredit ? undefined : "rgba(253,243,223,.55)",
+                  boxShadow: storyUsedCredit ? `0 8px 20px ${ACCENT.main}66` : "none",
                 }}
               >
                 {speaking ? "⏸" : "▶"}
+                {!storyUsedCredit && (
+                  <span className={styles.audioLockBadge}>🔒</span>
+                )}
               </button>
 
               <button
@@ -680,8 +772,131 @@ const Home: NextPage = () => {
         )}
 
       </div>
+
+      {/* ── Modals ── */}
+      {showUpgradeModal && (
+        <UpgradeModal
+          view={showUpgradeModal}
+          onClose={() => setShowUpgradeModal(null)}
+        />
+      )}
+      {showSuccessModal && (
+        <SuccessModal onClose={() => setShowSuccessModal(false)} />
+      )}
     </>
   );
 };
+
+// ── FormHeader — user identity + quota bar at top of form card ───────────────
+
+interface FormHeaderProps {
+  user: import("@supabase/supabase-js").User | null;
+  tier: "guest" | "free" | "paid";
+  credits: number;
+  profile: { stories_generated: number } | null;
+  onSignOut: () => void;
+  onUpgrade: () => void;
+}
+
+function FormHeader({ user, tier, credits, profile, onSignOut, onUpgrade }: FormHeaderProps) {
+  const router = useRouter();
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const headerStyle: React.CSSProperties = {
+    display: "flex", alignItems: "center", justifyContent: "space-between",
+    gap: ".5rem",
+    paddingBottom: ".95rem",
+    marginBottom: "1.2rem",
+    borderBottom: "1px solid rgba(0,0,0,.06)",
+  };
+
+  if (!user) {
+    // Guest header
+    return (
+      <div style={headerStyle}>
+        <span style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", background: "#efe6fb", borderRadius: 99, padding: ".32rem .7rem", fontSize: ".76rem", fontWeight: 600, color: "#6a4f8c" }}>
+          🌙 מצב אורח
+        </span>
+        <span style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
+          <button
+            onClick={() => router.push("/auth?mode=signin")}
+            style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}
+          >
+            כניסה
+          </button>
+          <button
+            onClick={() => router.push("/auth?mode=register")}
+            style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}
+          >
+            הרשמה
+          </button>
+        </span>
+      </div>
+    );
+  }
+
+  // Signed-in header
+  const displayName = (user.user_metadata?.display_name as string | undefined)
+    ?? user.email?.split("@")[0]
+    ?? "משתמש";
+  const initial = displayName.trim()[0]?.toUpperCase() ?? "מ";
+
+  const used = profile?.stories_generated ?? 0;
+  const remaining = Math.max(0, 5 - used);
+  const isCredits = tier === "paid" && credits > 0;
+
+  const quotaStyle: React.CSSProperties = isCredits
+    ? { background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", borderRadius: 99, padding: "1px 8px", fontSize: ".68rem", fontWeight: 700, marginTop: 2, whiteSpace: "nowrap" }
+    : { background: "#efe6fb", color: "#6a4f8c", borderRadius: 99, padding: "1px 8px", fontSize: ".68rem", fontWeight: 700, marginTop: 2, whiteSpace: "nowrap" };
+
+  return (
+    <div style={headerStyle}>
+      {/* Left: avatar + name + quota */}
+      <span style={{ display: "inline-flex", alignItems: "center", gap: ".55rem" }}>
+        <span style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg,#7a4fb0,#553089)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Rubik', sans-serif", fontWeight: 700, fontSize: ".95rem", flexShrink: 0 }}>
+          {initial}
+        </span>
+        <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
+          <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, color: "#3a2a5c" }}>
+            שלום, {displayName}
+          </span>
+          <span style={quotaStyle}>
+            {isCredits ? `✦ ${credits} קרדיטים · סיפור מלא` : `נותרו ${remaining} מתוך 5 · סיפור בסיסי`}
+          </span>
+        </span>
+      </span>
+
+      {/* Right: upgrade CTA (free only) + menu button */}
+      <div style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
+        {tier === "free" && (
+          <button
+            onClick={onUpgrade}
+            style={{ background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", border: "none", borderRadius: 99, padding: ".34rem .72rem", fontFamily: "'Rubik', sans-serif", fontSize: ".74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
+          >
+            שדרגו למלא ✦
+          </button>
+        )}
+        <div style={{ position: "relative" }}>
+        <button
+          onClick={() => setMenuOpen((o) => !o)}
+          style={{ width: 34, height: 34, borderRadius: "50%", border: "1.5px solid #e7dccd", background: "#fffdf8", color: "#7a5fa0", fontSize: "1.1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}
+        >
+          ⋯
+        </button>
+        {menuOpen && (
+          <div style={{ position: "absolute", top: 40, left: 0, background: "#fff8ef", border: "1.5px solid #e7dccd", borderRadius: 12, boxShadow: "0 8px 24px rgba(10,5,30,.18)", minWidth: 120, zIndex: 100, overflow: "hidden" }}>
+            <button
+              onClick={() => { setMenuOpen(false); onSignOut(); }}
+              style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", color: "#6b5a82", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", textAlign: "right", direction: "rtl" }}
+            >
+              יציאה
+            </button>
+          </div>
+        )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 export default Home;
