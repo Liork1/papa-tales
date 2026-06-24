@@ -142,6 +142,7 @@ const Home: NextPage = () => {
   useEffect(() => { phaseRef.current = phase; }, [phase]);
 
   const isDesktop = cw >= 1024;
+  const isTablet = cw >= 600 && cw < 1024;
   const sortedPageKeys = story
     ? Object.keys(story.pages).sort((a, b) => Number(a) - Number(b))
     : [];
@@ -624,7 +625,7 @@ const Home: NextPage = () => {
         {/* ── Reader ── */}
         {phase === "reading" && story && (
           <div
-            className={`${styles.readerWrap} ${isDesktop ? styles.readerWrapDesktop : ""}`}
+            className={`${styles.readerWrap} ${isDesktop ? styles.readerWrapDesktop : isTablet ? styles.readerWrapTablet : ""}`}
           >
             {/* Header */}
             <div className={styles.readerHeader}>
@@ -636,48 +637,42 @@ const Home: NextPage = () => {
 
             {/* Page card */}
             <div
-              className={`${styles.pageCard} ${isDesktop ? styles.pageCardDesktop : ""}`}
-              style={{ aspectRatio: isDesktop ? "16/10" : "3/4" }}
+              ref={pageRef}
+              className={`${styles.pageCard} ${isDesktop ? styles.pageCardDesktop : ""} ${!isDesktop && !isCover ? styles.pageCardColumn : ""}`}
+              style={{ aspectRatio: isDesktop ? "16/10" : isCover ? "3/4" : undefined }}
             >
-              <div ref={pageRef} className={styles.pageInner}>
 
-                {/* ── Compact (mobile + tablet) ── */}
-                {!isDesktop && (
-                  <>
+                {/* ── Compact cover (mobile + tablet) — absolute overlay on portrait image ── */}
+                {!isDesktop && isCover && (
+                  <div className={styles.pageInner}>
                     <SceneLayers showTag={demoMode} />
-
-                    {isCover && (
-                      <div className={styles.coverOverlay}>
-                        <span className={styles.coverDecor}>✦</span>
-                        <h2 className={styles.coverTitle}>{story.title}</h2>
-                        <p className={styles.coverAuthor}>{authorDisplay}</p>
-                        <span className={styles.coverDecor}>✦</span>
-                        <span className={styles.coverHint}>
-                          הקישו ▶ להקראה · דפדפו להמשך
-                        </span>
-                      </div>
-                    )}
-
-                    {!isCover && (
-                      <div className={styles.captionDrawer}>
-                        <p className={styles.captionText}>{pageText}</p>
-                      </div>
-                    )}
-
-                    {!isCover && story.rhymeScheme && (
-                      <span
-                        className={styles.rhymeBadge}
-                        style={{ color: ACCENT.ink, background: ACCENT.soft }}
-                      >
-                        חריזה · {story.rhymeScheme}
+                    <div className={styles.coverOverlay}>
+                      <span className={styles.coverDecor}>✦</span>
+                      <h2 className={styles.coverTitle}>{story.title}</h2>
+                      <p className={styles.coverAuthor}>{authorDisplay}</p>
+                      <span className={styles.coverDecor}>✦</span>
+                      <span className={styles.coverHint}>
+                        הקישו ▶ להקראה · דפדפו להמשך
                       </span>
-                    )}
+                    </div>
+                  </div>
+                )}
+
+                {/* ── Compact inner pages (mobile + tablet) — image on top, text below ── */}
+                {!isDesktop && !isCover && (
+                  <>
+                    <div className={styles.pageImageArea}>
+                      <SceneLayers showTag={demoMode} />
+                    </div>
+                    <div className={styles.captionBelow}>
+                      <p className={styles.captionText}>{pageText}</p>
+                    </div>
                   </>
                 )}
 
                 {/* ── Desktop ── */}
                 {isDesktop && (
-                  <>
+                  <div className={styles.pageInner}>
                     {isCover && (
                       <>
                         <SceneLayers showTag={demoMode} />
@@ -715,10 +710,9 @@ const Home: NextPage = () => {
                         <div className={styles.spineGradient} />
                       </div>
                     )}
-                  </>
+                  </div>
                 )}
 
-              </div>
             </div>
 
             {/* Controls */}
