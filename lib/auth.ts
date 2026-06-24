@@ -13,11 +13,11 @@ export function getAuthClient(): SupabaseClient {
   return browserClient;
 }
 
-export async function signInWithGoogle(redirectTo?: string): Promise<void> {
+export async function signInWithGoogle(): Promise<void> {
   const client = getAuthClient();
   await client.auth.signInWithOAuth({
     provider: "google",
-    options: { redirectTo: `${window.location.origin}${redirectTo ?? "/"}` },
+    options: { redirectTo: `${window.location.origin}/auth/callback` },
   });
 }
 
