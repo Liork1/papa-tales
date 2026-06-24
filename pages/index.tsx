@@ -663,14 +663,6 @@ const Home: NextPage = () => {
                   <>
                     <div className={styles.pageImageArea}>
                       <SceneLayers showTag={demoMode} />
-                      {story.rhymeScheme && (
-                        <span
-                          className={styles.rhymeBadge}
-                          style={{ color: ACCENT.ink, background: ACCENT.soft }}
-                        >
-                          חריזה · {story.rhymeScheme}
-                        </span>
-                      )}
                     </div>
                     <div className={styles.captionBelow}>
                       <p className={styles.captionText}>{pageText}</p>
