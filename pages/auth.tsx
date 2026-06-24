@@ -37,7 +37,7 @@ const AuthPage: NextPage = () => {
   const ctaDisabled = loading || (isRegister && !terms) || !email || !password;
 
   const handleGoogle = () => {
-    signInWithGoogle("/");
+    signInWithGoogle();
   };
 
   const handleSubmit = async () => {
