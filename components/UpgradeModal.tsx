@@ -146,13 +146,14 @@ function CreditsWall({
 function BuySheet({
   selectedPkg, setSelectedPkg,
   payMethod, setPayMethod,
-  onPurchase, onClose,
+  onPurchase, loading, onClose,
 }: {
   selectedPkg: PkgId;
   setSelectedPkg: (id: PkgId) => void;
   payMethod: PayMethod;
   setPayMethod: (m: PayMethod) => void;
   onPurchase: () => void;
+  loading: boolean;
   onClose: () => void;
 }) {
   const pkg = PACKAGES.find((p) => p.id === selectedPkg) ?? PACKAGES[1];
@@ -237,7 +238,9 @@ function BuySheet({
           : "⏱ אימות התשלום בביט עשוי להימשך עד 24 שעות"}
       </div>
 
-      <button onClick={onPurchase} style={GOLD_BTN}>{ctaLabel}</button>
+      <button onClick={onPurchase} disabled={loading} style={{ ...GOLD_BTN, opacity: loading ? 0.7 : 1 }}>
+        {loading ? "מעביר לפייפאל…" : ctaLabel}
+      </button>
 
       <p style={{ textAlign: "center", fontSize: ".74rem", color: "#b6a48d", margin: ".7rem 0 0" }}>
         תשלום חד‑פעמי · הקרדיטים נשמרים בחשבון
@@ -263,9 +266,31 @@ export default function UpgradeModal({ view, onClose }: Props) {
   const [currentView, setCurrentView] = useState<"creditsWall" | "buySheet">(view);
   const [selectedPkg, setSelectedPkg] = useState<PkgId>("p6");
   const [payMethod, setPayMethod] = useState<PayMethod>("paypal");
+  const [loading, setLoading] = useState(false);
 
-  function handlePurchase() {
-    alert("רכישת קרדיטים בקרוב!");
+  async function handlePurchase() {
+    if (payMethod === "bit") {
+      alert("תשלום בביט יהיה זמין בקרוב!");
+      return;
+    }
+    setLoading(true);
+    try {
+      const res = await fetch("/api/paypal/create-order", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ pkgId: selectedPkg }),
+      });
+      const data = await res.json();
+      if (data.approveUrl) {
+        window.location.href = data.approveUrl;
+      } else {
+        alert("שגיאה בעת יצירת ההזמנה, נסו שוב");
+        setLoading(false);
+      }
+    } catch {
+      alert("שגיאת רשת, נסו שוב");
+      setLoading(false);
+    }
   }
 
   return (
@@ -292,6 +317,7 @@ export default function UpgradeModal({ view, onClose }: Props) {
           payMethod={payMethod}
           setPayMethod={setPayMethod}
           onPurchase={handlePurchase}
+          loading={loading}
           onClose={onClose}
         />
       )}

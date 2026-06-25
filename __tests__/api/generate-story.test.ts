@@ -69,6 +69,7 @@ function makeSupabaseMock({
           : null,
       }),
       update: jest.fn().mockReturnThis(),
+      upsert: jest.fn().mockResolvedValue({ error: null }),
       insert: jest.fn().mockResolvedValue({ error: null }),
     }),
   };

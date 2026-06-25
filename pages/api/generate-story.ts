@@ -218,7 +218,10 @@ export default async function handler(
     await Promise.all([
       (async () => {
         const { data } = await supabase.from("user_profiles").select("stories_generated").eq("id", user.id).single();
-        await supabase.from("user_profiles").update({ stories_generated: (data?.stories_generated ?? 0) + 1 }).eq("id", user.id);
+        await supabase.from("user_profiles").upsert(
+          { id: user.id, stories_generated: (data?.stories_generated ?? 0) + 1 },
+          { onConflict: "id" }
+        );
       })(),
       supabase.from("user_generated_stories").insert({
         user_id: user.id,
