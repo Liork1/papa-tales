@@ -1,4 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
+import sharp from "sharp";
 
 export interface GenerateImageRequest {
   prompt: string;
@@ -59,7 +60,7 @@ export default async function handler(
         },
         body: JSON.stringify({
           contents: [{ parts: [{ text: finalPrompt }] }],
-          generationConfig: { responseModalities: ["IMAGE"] },
+          generationConfig: { responseModalities: ["IMAGE"], imageSize: "0.5K" },
         }),
       });
 
@@ -86,8 +87,12 @@ export default async function handler(
         throw new Error("Gemini returned no image in response");
       }
 
-      const { data, mimeType } = imagePart.inlineData;
-      return res.status(200).json({ success: true, imageData: data, mimeType });
+      const { data } = imagePart.inlineData;
+      const compressed = await sharp(Buffer.from(data, "base64"))
+        .resize(512, 512, { fit: "inside", withoutEnlargement: true })
+        .webp({ quality: 75 })
+        .toBuffer();
+      return res.status(200).json({ success: true, imageData: compressed.toString("base64"), mimeType: "image/webp" });
     } catch (err) {
       lastError = err;
       const message = err instanceof Error ? err.message : String(err);

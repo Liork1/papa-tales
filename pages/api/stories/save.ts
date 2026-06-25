@@ -44,12 +44,15 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const uploadPromises = Object.entries(images ?? {}).map(async ([key, dataUrl]) => {
     if (!dataUrl || typeof dataUrl !== "string") return;
     try {
+      const mimeMatch = dataUrl.match(/^data:(image\/\w+);base64,/);
+      const mimeType = mimeMatch?.[1] ?? "image/png";
+      const ext = mimeType === "image/webp" ? "webp" : mimeType === "image/jpeg" ? "jpg" : "png";
       const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, "");
       const buf = Buffer.from(base64, "base64");
-      const path = `${user.id}/${storyId}/${key}.png`;
+      const path = `${user.id}/${storyId}/${key}.${ext}`;
       const { error } = await supabase.storage
         .from("story-images")
-        .upload(path, buf, { contentType: "image/png", upsert: false });
+        .upload(path, buf, { contentType: mimeType, upsert: false });
       if (!error) imagePaths[key] = path;
     } catch {}
   });
