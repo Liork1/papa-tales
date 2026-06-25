@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createServerClient } from "@supabase/ssr";
+import { getRequestUser, serviceDb } from "@/lib/api-auth";
 
 export interface LibraryStory {
   id: string;
@@ -18,21 +18,9 @@ export interface LibraryStory {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "GET") return res.status(405).end();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => Object.entries(req.cookies).map(([name, value]) => ({ name, value: value ?? "" })),
-        setAll: (cookies) => cookies.forEach(({ name, value }) => {
-          res.setHeader("Set-Cookie", `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`);
-        }),
-      },
-    }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  const user = await getRequestUser(req, res);
+  if (!user) return;
+  const supabase = serviceDb();
 
   const { data: rows, error } = await supabase
     .from("user_story_library")
@@ -45,7 +33,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
   // Resolve signed URLs (1 h TTL) for all images in parallel
   const stories: LibraryStory[] = await Promise.all(
-    rows.map(async (row) => {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    rows.map(async (row: any) => {
       const imagePaths = (row.image_paths ?? {}) as Record<string, string>;
       const imageUrls: Record<string, string> = {};
 

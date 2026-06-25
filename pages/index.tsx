@@ -7,6 +7,7 @@ import type { GenerateStoryResponse } from "@/types/api";
 import type { LibraryStory } from "@/pages/api/stories/library";
 import { useUserContext } from "@/lib/user-context";
 import { signOut } from "@/lib/auth";
+import { authFetch } from "@/lib/auth-fetch";
 import UpgradeModal from "@/components/UpgradeModal";
 import SuccessModal from "@/components/SuccessModal";
 
@@ -240,7 +241,7 @@ const Home: NextPage = () => {
   // Fetch saved story library for signed-in users
   useEffect(() => {
     if (!user) return;
-    fetch("/api/stories/library")
+    authFetch("/api/stories/library")
       .then((r) => r.ok ? r.json() : null)
       .then((data) => {
         if (data?.stories) setLibrary(data.stories as LibraryStory[]);
@@ -267,7 +268,7 @@ const Home: NextPage = () => {
       if (v && v !== "loading" && v !== "error") readyImages[k] = v as string;
     }
 
-    fetch("/api/stories/save", {
+    authFetch("/api/stories/save", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ story, authorName, ageGroup, prompt, images: readyImages }),
@@ -345,7 +346,7 @@ const Home: NextPage = () => {
     window.history.replaceState({}, "", url.toString());
 
     if (!orderId) return;
-    fetch("/api/paypal/capture-order", {
+    authFetch("/api/paypal/capture-order", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ orderId }),
@@ -404,7 +405,7 @@ const Home: NextPage = () => {
     }, 1400);
 
     try {
-      const res = await fetch("/api/generate-story", {
+      const res = await authFetch("/api/generate-story", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ prompt: savedPrompt, ageGroup, useCredit }),

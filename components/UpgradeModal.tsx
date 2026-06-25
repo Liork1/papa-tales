@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { authFetch } from "@/lib/auth-fetch";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -275,7 +276,7 @@ export default function UpgradeModal({ view, onClose }: Props) {
     }
     setLoading(true);
     try {
-      const res = await fetch("/api/paypal/create-order", {
+      const res = await authFetch("/api/paypal/create-order", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ pkgId: selectedPkg }),
