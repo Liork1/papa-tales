@@ -21,7 +21,7 @@ interface StoryData {
   illustratedStory: Record<string, string>;
 }
 
-type Phase = "form" | "generating" | "reading" | "limit";
+type Phase = "form" | "generating" | "reading" | "limit" | "library";
 type ImageState = string | "loading" | "error";
 type ErrorScenario = "offline" | "server" | "timeout" | "rate" | "content";
 
@@ -151,6 +151,10 @@ const Home: NextPage = () => {
   const [savedGuestTitle, setSavedGuestTitle] = useState("");
   const [library, setLibrary] = useState<LibraryStory[]>([]);
   const [libLoaded, setLibLoaded] = useState(false);
+  const [libQuery, setLibQuery] = useState("");
+  const [libSort, setLibSort] = useState<"new" | "old">("new");
+  const [libFavOnly, setLibFavOnly] = useState(false);
+  const [favorites, setFavorites] = useState<Record<string, boolean>>({});
   const savedToDbRef = useRef<string | null>(null); // null = unsaved, "saving" = in-flight, uuid = done
 
   const rootRef = useRef<HTMLDivElement>(null);
@@ -863,6 +867,8 @@ const Home: NextPage = () => {
               ready={ready}
               onSignOut={async () => { await signOut(); refresh(); }}
               onUpgrade={() => setShowUpgradeModal("creditsWall")}
+              onOpenBuy={() => setShowUpgradeModal("buySheet")}
+              onOpenLibrary={() => setPhase("library")}
             />
 
             <span className={styles.moonEmoji}>🌙</span>
@@ -956,42 +962,24 @@ const Home: NextPage = () => {
             <button className={styles.demoLink} onClick={handleDemo}>
               דלגו ישר לדוגמת הספר ←
             </button>
-
-            {/* ── My Stories library ── */}
-            {user && library.length > 0 && (
-              <div style={{ marginTop: "1.4rem", borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: "1.2rem" }}>
-                <div style={{ fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, color: "#5c4a78", marginBottom: ".7rem" }}>
-                  הסיפורים שלי
-                </div>
-                <div style={{ display: "flex", gap: ".65rem", overflowX: "auto", paddingBottom: ".4rem" }}>
-                  {library.map((saved) => {
-                    const cover = saved.imageUrls?.cover;
-                    const sc = SCENES[0];
-                    return (
-                      <button
-                        key={saved.id}
-                        onClick={() => loadSavedStory(saved)}
-                        style={{ display: "flex", flexDirection: "column", gap: ".4rem", background: "none", border: "1.5px solid #e7dccd", borderRadius: 14, padding: ".5rem", cursor: "pointer", flexShrink: 0, width: 88, textAlign: "right" }}
-                      >
-                        <span style={{ width: 72, height: 72, borderRadius: 10, overflow: "hidden", display: "block", flexShrink: 0 }}>
-                          {cover
-                            ? <img src={cover} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
-                            : <div style={{ width: "100%", height: "100%", background: sc.bg }} />
-                          }
-                        </span>
-                        <span style={{ fontSize: ".7rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%", display: "block" }}>
-                          {saved.title}
-                        </span>
-                        <span style={{ fontSize: ".66rem", color: "#b6a48d" }}>
-                          {Object.keys(saved.pages).length} עמודים
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
           </div>
+        )}
+
+        {/* ── Library ── */}
+        {phase === "library" && (
+          <LibraryView
+            library={library}
+            libQuery={libQuery}
+            libSort={libSort}
+            libFavOnly={libFavOnly}
+            favorites={favorites}
+            onQuery={setLibQuery}
+            onToggleSort={() => setLibSort((s) => s === "new" ? "old" : "new")}
+            onToggleFav={() => setLibFavOnly((f) => !f)}
+            onToggleFavId={(id: string) => setFavorites((prev) => ({ ...prev, [id]: !prev[id] }))}
+            onOpen={(s: LibraryStory) => { loadSavedStory(s); }}
+            onClose={() => setPhase("form")}
+          />
         )}
 
         {/* ── Generating ── */}
@@ -1173,6 +1161,133 @@ const Home: NextPage = () => {
   );
 };
 
+// ── LibraryView ──────────────────────────────────────────────────────────────
+
+interface LibraryViewProps {
+  library: LibraryStory[];
+  libQuery: string;
+  libSort: "new" | "old";
+  libFavOnly: boolean;
+  favorites: Record<string, boolean>;
+  onQuery: (q: string) => void;
+  onToggleSort: () => void;
+  onToggleFav: () => void;
+  onToggleFavId: (id: string) => void;
+  onOpen: (s: LibraryStory) => void;
+  onClose: () => void;
+}
+
+function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuery, onToggleSort, onToggleFav, onToggleFavId, onOpen, onClose }: LibraryViewProps) {
+  const q = libQuery.trim();
+  let list = library.map((s) => ({ ...s, fav: !!favorites[s.id] }));
+  if (q) list = list.filter((s) => s.title.includes(q));
+  if (libFavOnly) list = list.filter((s) => s.fav);
+  list.sort((a, b) => libSort === "new"
+    ? (a.created_at < b.created_at ? 1 : -1)
+    : (a.created_at > b.created_at ? 1 : -1));
+
+  const chipBase: React.CSSProperties = { padding: ".42rem .9rem", borderRadius: 99, fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", border: "1.5px solid rgba(255,255,255,.16)", background: "rgba(255,255,255,.07)", color: "rgba(245,235,220,.82)" };
+  const emptyFav = libFavOnly && list.length === 0 && !q;
+
+  return (
+    <div style={{ width: "min(540px, 94vw)", display: "flex", flexDirection: "column", gap: "1rem" }}>
+
+      {/* Header */}
+      <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: ".6rem" }}>
+        <div style={{ display: "flex", flexDirection: "column" }}>
+          <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.55rem", fontWeight: 800, color: "#fdf3df" }}>הספרייה שלי</span>
+          <span style={{ fontSize: ".85rem", color: "rgba(245,235,220,.6)", fontWeight: 500, marginTop: ".15rem" }}>
+            {library.length} סיפורים שמורים · סיפורי קרדיט
+          </span>
+        </div>
+        <button
+          onClick={onClose}
+          style={{ background: "rgba(255,255,255,.08)", border: "1.5px solid rgba(255,255,255,.2)", color: "rgba(245,235,220,.88)", padding: ".5rem 1rem", borderRadius: 99, cursor: "pointer", fontFamily: "'Rubik', sans-serif", fontSize: ".85rem", fontWeight: 700, whiteSpace: "nowrap" }}
+        >
+          + סיפור חדש
+        </button>
+      </div>
+
+      {/* Search */}
+      <div style={{ position: "relative" }}>
+        <span style={{ position: "absolute", right: ".95rem", top: "50%", transform: "translateY(-50%)", fontSize: "1rem", opacity: .55, pointerEvents: "none" }}>🔍</span>
+        <input
+          type="text"
+          placeholder="חיפוש לפי שם הסיפור…"
+          value={libQuery}
+          onChange={(e) => onQuery(e.target.value)}
+          style={{ width: "100%", boxSizing: "border-box", padding: ".72rem 2.5rem .72rem 1rem", border: "1.5px solid rgba(255,255,255,.16)", borderRadius: 28, fontSize: ".95rem", fontFamily: "'Assistant', sans-serif", background: "rgba(255,255,255,.07)", color: "#fdf3df", direction: "rtl", outline: "none" }}
+        />
+      </div>
+
+      {/* Filter chips */}
+      <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
+        <button
+          onClick={onToggleFav}
+          style={libFavOnly ? { ...chipBase, background: "#fbe3ea", color: "#c23a5a", border: "1.5px solid #f3c9d4" } : chipBase}
+        >
+          ♥ מועדפים
+        </button>
+        <button onClick={onToggleSort} style={chipBase}>
+          {libSort === "new" ? "החדשים קודם ↓" : "הישנים קודם ↑"}
+        </button>
+      </div>
+
+      {/* Story rows */}
+      {list.length > 0 ? (
+        <div style={{ display: "flex", flexDirection: "column", gap: ".7rem" }}>
+          {list.map((s) => {
+            const cover = s.imageUrls?.cover;
+            const pageCount = Object.keys(s.pages).length;
+            const scene = SCENES[0];
+            return (
+              <div key={s.id} style={{ display: "flex", alignItems: "center", gap: ".85rem", background: "#fff8ef", borderRadius: 18, padding: ".8rem", boxShadow: "0 12px 32px rgba(10,5,30,.34)" }}>
+                <button
+                  onClick={() => onOpen(s)}
+                  style={{ position: "relative", width: 64, height: 64, borderRadius: 14, overflow: "hidden", flexShrink: 0, border: "none", padding: 0, cursor: "pointer", background: "#160f33" }}
+                >
+                  {cover
+                    ? <img src={cover} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    : <div style={{ position: "absolute", inset: 0, background: scene.bg }} />
+                  }
+                  <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "1.15rem", background: "rgba(10,5,30,.22)" }}>▶</span>
+                </button>
+                <button
+                  onClick={() => onOpen(s)}
+                  style={{ flex: 1, textAlign: "right", background: "none", border: "none", cursor: "pointer", padding: 0, minWidth: 0 }}
+                >
+                  <span style={{ display: "block", fontFamily: "'Rubik', sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</span>
+                  <span style={{ display: "block", fontSize: ".8rem", color: "#9a7fb0", fontWeight: 600, marginTop: ".18rem" }}>{pageCount} עמודים · גיל {s.age_group}</span>
+                  {s.author_name && <span style={{ display: "block", fontSize: ".76rem", color: "#b6a48d", marginTop: ".1rem" }}>מאת {s.author_name}</span>}
+                </button>
+                <div style={{ display: "flex", flexDirection: "column", gap: ".4rem", flexShrink: 0 }}>
+                  <button
+                    onClick={() => onToggleFavId(s.id)}
+                    title="מועדף"
+                    style={{ width: 38, height: 38, borderRadius: "50%", border: `1.5px solid ${s.fav ? "#f3c9d4" : "#e7dccd"}`, background: s.fav ? "#fdecef" : "#fffdf8", color: s.fav ? "#e0557a" : "#cbb8a6", fontSize: "1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, transition: "all .15s" }}
+                  >
+                    ♥
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      ) : (
+        <div style={{ background: "rgba(255,255,255,.05)", border: "1.5px dashed rgba(255,255,255,.18)", borderRadius: 18, padding: "2.3rem 1.4rem", textAlign: "center" }}>
+          <div style={{ fontSize: "2rem", marginBottom: ".6rem" }}>{emptyFav ? "♡" : "🔭"}</div>
+          <p style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1rem", fontWeight: 700, color: "#fdf3df", margin: "0 0 .35rem" }}>
+            {emptyFav ? "אין עדיין מועדפים" : "לא נמצאו סיפורים"}
+          </p>
+          <p style={{ fontSize: ".85rem", color: "rgba(245,235,220,.6)", margin: 0 }}>
+            {emptyFav ? "סמנו ♥ על סיפור כדי לשמור אותו כאן" : (q ? "נסו שם אחר או נקו את החיפוש" : "סיפורים שנוצרו עם קרדיטים יופיעו כאן")}
+          </p>
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ── FormHeader — user identity + quota bar at top of form card ───────────────
 
 interface FormHeaderProps {
@@ -1184,9 +1299,11 @@ interface FormHeaderProps {
   ready: boolean;
   onSignOut: () => void;
   onUpgrade: () => void;
+  onOpenBuy: () => void;
+  onOpenLibrary: () => void;
 }
 
-function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUpgrade }: FormHeaderProps) {
+function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUpgrade, onOpenBuy, onOpenLibrary }: FormHeaderProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -1255,7 +1372,7 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
         </span>
       </span>
 
-      {/* Right: upgrade CTA (free only) + menu button */}
+      {/* Right: tier-aware actions + menu button */}
       <div style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
         {tier === "free" && (
           <button
@@ -1264,6 +1381,24 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
           >
             שדרגו למלא ✦
           </button>
+        )}
+        {isCredits && (
+          <>
+            <button
+              onClick={onOpenBuy}
+              title="טעינת קרדיטים"
+              style={{ background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", border: "none", borderRadius: 99, padding: ".34rem .7rem", fontFamily: "'Rubik', sans-serif", fontSize: ".74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: ".22rem", flexShrink: 0 }}
+            >
+              ✦ טעינה
+            </button>
+            <button
+              onClick={onOpenLibrary}
+              title="הספרים שלי"
+              style={{ width: 34, height: 34, borderRadius: "50%", border: "1.5px solid #e7dccd", background: "#fffdf8", color: "#7a5fa0", fontSize: "1.05rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0 }}
+            >
+              📚
+            </button>
+          </>
         )}
         <div style={{ position: "relative" }}>
         <button
