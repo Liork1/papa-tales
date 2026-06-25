@@ -239,7 +239,7 @@ function BuySheet({
           : "⏱ אימות התשלום בביט עשוי להימשך עד 24 שעות"}
       </div>
 
-      <button onClick={onPurchase} disabled={loading} style={{ ...GOLD_BTN, opacity: loading ? 0.7 : 1 }}>
+      <button onClick={onPurchase} disabled={loading} dir="rtl" style={{ ...GOLD_BTN, opacity: loading ? 0.7 : 1 }}>
         {loading ? "מעביר לפייפאל…" : ctaLabel}
       </button>
 
