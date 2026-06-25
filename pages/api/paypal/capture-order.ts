@@ -26,7 +26,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(402).json({ error: "Payment not completed", details: capture });
   }
 
-  const pkgId = (capture.purchase_units?.[0]?.custom_id ?? "p6") as PkgId;
+  const pkgId = (capture.purchase_units?.[0]?.payments?.captures?.[0]?.custom_id ?? "p6") as PkgId;
   const creditsToAdd = PACKAGES[pkgId]?.credits ?? 6;
 
   const admin = serviceDb();
