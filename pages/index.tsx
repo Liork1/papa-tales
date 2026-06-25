@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
 import styles from "@/styles/book.module.css";
 import type { GenerateStoryResponse } from "@/types/api";
+import type { LibraryStory } from "@/pages/api/stories/library";
 import { useUserContext } from "@/lib/user-context";
 import { signOut } from "@/lib/auth";
 import UpgradeModal from "@/components/UpgradeModal";
@@ -19,7 +20,7 @@ interface StoryData {
   illustratedStory: Record<string, string>;
 }
 
-type Phase = "form" | "generating" | "reading";
+type Phase = "form" | "generating" | "reading" | "limit";
 type ImageState = string | "loading" | "error";
 type ErrorScenario = "offline" | "server" | "timeout" | "rate" | "content";
 
@@ -40,6 +41,22 @@ const AGE_GROUPS = [
 const STAGES = ["חושבים על הרעיון…", "כותבים בחרוזים…", "מציירים את האיורים…"];
 
 const ACCENT = { main: "#7a4fb0", deep: "#553089", soft: "#efe6fb", ink: "#4a2d72" };
+
+const GUEST_DATE_KEY = "papatales_guest_story_date";
+const GUEST_STORY_KEY = "papatales_guest_story";
+
+function getTodayStr(): string {
+  return new Date().toISOString().slice(0, 10);
+}
+function guestUsedToday(): boolean {
+  try {
+    return typeof localStorage !== "undefined" &&
+      localStorage.getItem(GUEST_DATE_KEY) === getTodayStr();
+  } catch { return false; }
+}
+function hoursUntilMidnight(): number {
+  return Math.max(1, 24 - new Date().getHours());
+}
 
 const ERROR_SCENARIOS: Record<ErrorScenario, {
   glyph: string; title: string; message: string;
@@ -130,6 +147,10 @@ const Home: NextPage = () => {
   const [images, setImages] = useState<Record<string, ImageState>>({});
   const [appError, setAppError] = useState<AppError | null>(null);
   const [demoMode, setDemoMode] = useState(false);
+  const [savedGuestTitle, setSavedGuestTitle] = useState("");
+  const [library, setLibrary] = useState<LibraryStory[]>([]);
+  const [libLoaded, setLibLoaded] = useState(false);
+  const savedToDbRef = useRef<string | null>(null); // null = unsaved, "saving" = in-flight, uuid = done
 
   const rootRef = useRef<HTMLDivElement>(null);
   const pageRef = useRef<HTMLDivElement>(null);
@@ -216,6 +237,99 @@ const Home: NextPage = () => {
     stopSpeech();
   }, []);
 
+  // Fetch saved story library for signed-in users
+  useEffect(() => {
+    if (!user) return;
+    fetch("/api/stories/library")
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.stories) setLibrary(data.stories as LibraryStory[]);
+      })
+      .catch(() => {})
+      .finally(() => setLibLoaded(true));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user?.id]);
+
+  // Auto-save credit story to DB once all images have settled (loaded or errored)
+  useEffect(() => {
+    if (!story || !storyUsedCredit || !user) return;
+    if (savedToDbRef.current) return;
+
+    const pageKeys = Object.keys(story.pages).sort((a, b) => Number(a) - Number(b));
+    const expectedKeys = ["cover", ...pageKeys];
+    const allSettled = expectedKeys.every((k) => images[k] !== undefined && images[k] !== "loading");
+    if (!allSettled) return;
+
+    savedToDbRef.current = "saving";
+    const readyImages: Record<string, string> = {};
+    for (const k of expectedKeys) {
+      const v = images[k];
+      if (v && v !== "loading" && v !== "error") readyImages[k] = v as string;
+    }
+
+    fetch("/api/stories/save", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ story, authorName, ageGroup, prompt, images: readyImages }),
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.id) {
+          savedToDbRef.current = data.id;
+          setLibrary((prev) => [{
+            id: data.id,
+            title: story.title,
+            author_name: authorName,
+            pages: story.pages,
+            rhyme_scheme: story.rhymeScheme,
+            word_count: story.wordCount,
+            illustrated_story: story.illustratedStory,
+            imageUrls: readyImages,
+            age_group: ageGroup,
+            prompt,
+            created_at: new Date().toISOString(),
+          }, ...prev]);
+        }
+      })
+      .catch(() => { savedToDbRef.current = null; });
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images]);
+
+  // Check guest 24h daily limit on mount (localStorage not available during SSR)
+  useEffect(() => {
+    if (typeof window === "undefined" || user) return;
+    if (!guestUsedToday()) return;
+    try {
+      const raw = localStorage.getItem(GUEST_STORY_KEY);
+      if (raw) {
+        const saved = JSON.parse(raw) as StoryData & { authorName?: string; coverImage?: string };
+        const { authorName: an, coverImage, ...storyData } = saved;
+        setStory(storyData);
+        setAuthorName(an ?? "");
+        setSavedGuestTitle(storyData.title);
+        setImages(coverImage ? { cover: coverImage } : {});
+      }
+    } catch {}
+    setPhase("limit");
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Persist cover image to localStorage once it loads (guest only)
+  useEffect(() => {
+    if (user) return;
+    const cover = images["cover"];
+    if (!cover || cover === "loading" || cover === "error") return;
+    if (!guestUsedToday()) return;
+    try {
+      const raw = localStorage.getItem(GUEST_STORY_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved.coverImage === cover) return;
+      saved.coverImage = cover;
+      localStorage.setItem(GUEST_STORY_KEY, JSON.stringify(saved));
+    } catch {}
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [images["cover"]]);
   // Detect successful payment redirect (?payment=success)
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -248,10 +362,7 @@ const Home: NextPage = () => {
     if (prompt.trim().length < 10) return;
 
     // ── Tier gate ────────────────────────────────────────────────────────────
-    const guestCount = parseInt(
-      (typeof localStorage !== "undefined" ? localStorage.getItem("papa_tales_guest_count") : null) ?? "0"
-    );
-    if (!user && guestCount >= 1) { router.push("/auth?mode=register"); return; }
+    if (!user && guestUsedToday()) { setPhase("limit"); return; }
     if (user && tier === "free" && (profile?.stories_generated ?? 0) >= 5) {
       setShowUpgradeModal("creditsWall"); return;
     }
@@ -265,6 +376,7 @@ const Home: NextPage = () => {
     setPhase("generating");
     setStage(0);
     setDemoMode(false);
+    savedToDbRef.current = null;
 
     const savedPrompt = prompt.trim();
     let s = 0;
@@ -307,9 +419,12 @@ const Home: NextPage = () => {
       setCurrentPage(0);
       setPhase("reading");
 
-      // Guest: increment localStorage counter
       if (!user) {
-        localStorage.setItem("papa_tales_guest_count", "1");
+        try {
+          localStorage.setItem(GUEST_DATE_KEY, getTodayStr());
+          localStorage.setItem(GUEST_STORY_KEY, JSON.stringify({ ...result, authorName }));
+        } catch {}
+        setSavedGuestTitle(result.title);
       }
       // Refresh credits/profile in background
       refresh();
@@ -371,11 +486,36 @@ const Home: NextPage = () => {
   const handleReset = () => {
     stopSpeech();
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
-    setPhase("form");
+    setPhase(!user && guestUsedToday() ? "limit" : "form");
     setCurrentPage(0);
     setDemoMode(false);
   };
 
+  const openSavedStory = () => {
+    if (!story) return;
+    stopSpeech();
+    setCurrentPage(0);
+    setImages({});
+    setPhase("reading");
+  };
+
+  const loadSavedStory = (saved: LibraryStory) => {
+    stopSpeech();
+    savedToDbRef.current = saved.id;
+    setStory({
+      title: saved.title,
+      pages: saved.pages,
+      rhymeScheme: saved.rhyme_scheme,
+      wordCount: saved.word_count,
+      illustratedStory: saved.illustrated_story,
+    });
+    setAuthorName(saved.author_name ?? "");
+    setImages(saved.imageUrls as Record<string, ImageState>);
+    setStoryUsedCredit(true);
+    setDemoMode(false);
+    setCurrentPage(0);
+    setPhase("reading");
+  };
   const handleSpeak = () => {
     if (!storyUsedCredit) { setShowUpgradeModal("buySheet"); return; }
     if (typeof window === "undefined" || !window.speechSynthesis) return;
@@ -473,6 +613,92 @@ const Home: NextPage = () => {
       </Head>
 
       <div ref={rootRef} className={styles.wrapper}>
+
+        {/* ── Daily limit (guest, 1/day) ── */}
+        {phase === "limit" && (
+          <div className={styles.formCard}>
+            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".5rem", paddingBottom: ".95rem", marginBottom: "1.35rem", borderBottom: "1px solid rgba(0,0,0,.06)" }}>
+              <span style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", background: "#efe6fb", borderRadius: 99, padding: ".32rem .7rem", fontSize: ".76rem", fontWeight: 600, color: "#6a4f8c" }}>
+                🌙 מצב אורח
+              </span>
+              <span style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
+                <button onClick={() => router.push("/auth?mode=signin")} style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}>כניסה</button>
+                <button onClick={() => router.push("/auth?mode=register")} style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}>הרשמה</button>
+              </span>
+            </div>
+
+            <div style={{ textAlign: "center", marginBottom: "1.35rem" }}>
+              <div style={{ position: "relative", width: 68, height: 68, margin: "0 auto .9rem" }}>
+                <div style={{ width: 68, height: 68, borderRadius: "50%", background: "#efe6fb", color: "#4a2d72", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.9rem" }}>🌙</div>
+                <span style={{ position: "absolute", bottom: -2, left: -2, width: 26, height: 26, borderRadius: "50%", background: "#2ecc71", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".82rem", fontWeight: 700, border: "3px solid #fff8ef" }}>✓</span>
+              </div>
+              <h1 style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.5rem", fontWeight: 800, color: "#3a2a5c", margin: "0 0 .45rem" }}>הסיפור היומי שלכם מוכן</h1>
+              <p style={{ fontSize: ".95rem", lineHeight: 1.6, color: "#6b5a82", margin: "0 auto", maxWidth: 330 }}>
+                במצב אורח אפשר ליצור סיפור אחד בכל יום. סיפור חדש יחכה לכם מחר 🌙
+              </p>
+              <div style={{ display: "inline-flex", alignItems: "center", gap: ".45rem", background: "#fdf3df", color: "#9a6a16", fontWeight: 700, fontSize: ".78rem", padding: ".35rem .85rem", borderRadius: 99, marginTop: ".9rem" }}>
+                <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#e0a83f", display: "inline-block" }} />
+                מתחדש בעוד {hoursUntilMidnight()} שעות
+              </div>
+            </div>
+
+            {story && (
+              <button onClick={openSavedStory} style={{ display: "flex", alignItems: "center", gap: ".85rem", width: "100%", textAlign: "right", background: "#fffdf8", border: "1.5px solid #e7dccd", borderRadius: 18, padding: ".7rem", cursor: "pointer", marginBottom: ".85rem" }}>
+                <span style={{ position: "relative", width: 58, height: 58, borderRadius: 13, overflow: "hidden", flexShrink: 0 }}>
+                  {images["cover"] && images["cover"] !== "loading" && images["cover"] !== "error"
+                    ? <img src={images["cover"] as string} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    : <div style={{ position: "absolute", inset: 0, background: SCENES[0].bg }} />
+                  }
+                </span>
+                <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: ".12rem", minWidth: 0, textAlign: "right" }}>
+                  <span style={{ fontSize: ".72rem", fontWeight: 700, color: "#9a7fb0" }}>הסיפור שיצרתם היום</span>
+                  <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.02rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
+                    {savedGuestTitle || story.title}
+                  </span>
+                  <span style={{ fontSize: ".78rem", color: "#b6a48d" }}>{Object.keys(story.pages).length} עמודים · מאוייר</span>
+                </span>
+                <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "#efe6fb", color: "#7a4fb0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.15rem" }}>←</span>
+              </button>
+            )}
+
+            <button onClick={openSavedStory} disabled={!story} style={{ width: "100%", padding: ".95rem", border: "none", borderRadius: 16, color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: "1.05rem", fontWeight: 700, cursor: story ? "pointer" : "not-allowed", opacity: story ? 1 : 0.5, background: `linear-gradient(135deg, ${ACCENT.main}, ${ACCENT.deep})`, boxShadow: `0 10px 24px ${ACCENT.main}55`, marginBottom: "1.35rem" }}>
+              המשיכו לסיפור שלכם →
+            </button>
+
+            <div style={{ display: "flex", alignItems: "center", gap: ".8rem", marginBottom: "1.35rem" }}>
+              <span style={{ flex: 1, height: 1, background: "#ece2d4" }} />
+              <span style={{ fontSize: ".8rem", color: "#b6a48d", fontWeight: 600 }}>רוצים עוד עכשיו?</span>
+              <span style={{ flex: 1, height: 1, background: "#ece2d4" }} />
+            </div>
+
+            <div style={{ border: "1.5px solid #f0dfb0", background: "linear-gradient(180deg,#fffaf0,#fdf3df)", borderRadius: 18, padding: "1.15rem 1.2rem" }}>
+              <div style={{ display: "flex", alignItems: "center", gap: ".65rem", marginBottom: ".75rem" }}>
+                <span style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>✦</span>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontFamily: "'Rubik', sans-serif", fontWeight: 800, color: "#3a2a5c", fontSize: "1.02rem" }}>קנו קרדיטים — בלי להמתין</div>
+                  <div style={{ fontSize: ".82rem", color: "#8a6a3a", fontWeight: 600 }}>צרו סיפורים מלאים כבר עכשיו</div>
+                </div>
+              </div>
+              <div style={{ display: "flex", flexDirection: "column", gap: ".4rem", marginBottom: "1rem" }}>
+                {["איור צבעוני בכל עמוד", "הקראה קולית של הסיפור", "בלי הגבלה יומית"].map((perk) => (
+                  <span key={perk} style={{ display: "flex", alignItems: "center", gap: ".5rem", fontSize: ".86rem", color: "#6b5a82" }}>
+                    <span style={{ color: "#dca83f", fontWeight: 700 }}>✦</span> {perk}
+                  </span>
+                ))}
+              </div>
+              <button onClick={() => setShowUpgradeModal("creditsWall")} style={{ width: "100%", padding: ".9rem", border: "none", borderRadius: 14, background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", fontFamily: "'Rubik', sans-serif", fontWeight: 800, fontSize: "1.04rem", cursor: "pointer", boxShadow: "0 10px 22px rgba(220,168,63,.4)" }}>
+                קנו קרדיטים ✦
+              </button>
+            </div>
+
+            <p style={{ textAlign: "center", fontSize: ".82rem", color: "#9a7fb0", margin: "1.05rem 0 0", lineHeight: 1.55 }}>
+              לא רוצים לשלם?{" "}
+              <button onClick={() => router.push("/auth?mode=register")} style={{ background: "none", border: "none", color: "#5b37b7", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", padding: 0 }}>
+                הירשמו חינם ל‑5 סיפורים
+              </button>
+            </p>
+          </div>
+        )}
 
         {/* ── Error card (replaces form on failure) ── */}
         {phase === "form" && appError && (() => {
@@ -607,6 +833,41 @@ const Home: NextPage = () => {
             <button className={styles.demoLink} onClick={handleDemo}>
               דלגו ישר לדוגמת הספר ←
             </button>
+
+            {/* ── My Stories library ── */}
+            {user && library.length > 0 && (
+              <div style={{ marginTop: "1.4rem", borderTop: "1px solid rgba(0,0,0,.06)", paddingTop: "1.2rem" }}>
+                <div style={{ fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, color: "#5c4a78", marginBottom: ".7rem" }}>
+                  הסיפורים שלי
+                </div>
+                <div style={{ display: "flex", gap: ".65rem", overflowX: "auto", paddingBottom: ".4rem" }}>
+                  {library.map((saved) => {
+                    const cover = saved.imageUrls?.cover;
+                    const sc = SCENES[0];
+                    return (
+                      <button
+                        key={saved.id}
+                        onClick={() => loadSavedStory(saved)}
+                        style={{ display: "flex", flexDirection: "column", gap: ".4rem", background: "none", border: "1.5px solid #e7dccd", borderRadius: 14, padding: ".5rem", cursor: "pointer", flexShrink: 0, width: 88, textAlign: "right" }}
+                      >
+                        <span style={{ width: 72, height: 72, borderRadius: 10, overflow: "hidden", display: "block", flexShrink: 0 }}>
+                          {cover
+                            ? <img src={cover} alt="" style={{ width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                            : <div style={{ width: "100%", height: "100%", background: sc.bg }} />
+                          }
+                        </span>
+                        <span style={{ fontSize: ".7rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis", width: "100%", display: "block" }}>
+                          {saved.title}
+                        </span>
+                        <span style={{ fontSize: ".66rem", color: "#b6a48d" }}>
+                          {Object.keys(saved.pages).length} עמודים
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 

@@ -1,12 +1,12 @@
 # Papa Tales
 
-AI-powered Hebrew children's story generator. Generates rhyming stories using Gemini Flash with inspirational story seeds from a local Supabase database.
+AI-powered Hebrew children's story generator. Generates rhyming stories using OpenRouter with inspirational story seeds from a local Supabase database.
 
 ## Prerequisites
 
 - Node.js 18+
 - [Supabase CLI](https://supabase.com/docs/guides/cli) (`brew install supabase/tap/supabase`)
-- Google AI API key
+- OpenRouter API key
 
 ## Setup
 
@@ -21,10 +21,16 @@ npm install
 Copy `.env` and fill in your keys, or create `.env.local`:
 
 ```env
-GOOGLE_API_KEY=your-google-ai-key
+OPENROUTER_API_KEY=your-openrouter-api-key
+OPENROUTER_MODEL=google/gemini-2.5-flash-lite
+OPENROUTER_SITE_URL=http://localhost:3000
+OPENROUTER_APP_NAME=Papa Tales
+AI_REQUEST_TIMEOUT_MS=120000
 SUPABASE_URL=http://localhost:54321
 SUPABASE_ANON_KEY=<see step 3>
 ```
+
+Change `OPENROUTER_MODEL` to switch providers, for example `google/gemini-2.5-pro`, `google/gemini-2.5-flash-lite`, `openai/o3-pro`, or any other model slug available in OpenRouter.
 
 ### 3. Start local Supabase
 
@@ -108,7 +114,7 @@ pages/
     health.ts
   index.tsx
 lib/
-  ai.ts                 # Gemini AI client + story generation
+  ai.ts                 # OpenRouter AI client + story generation
   supabase.ts           # Supabase client + DB queries
   stories.ts            # Story fetching and context building
   i18n.ts               # Hebrew translations helper
