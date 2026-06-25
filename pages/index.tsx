@@ -332,16 +332,32 @@ const Home: NextPage = () => {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [images["cover"]]);
 
-  // Detect successful payment redirect (?payment=success)
+  // Detect successful PayPal redirect (?payment=success&token=ORDER_ID)
   useEffect(() => {
     if (typeof window === "undefined") return;
     const url = new URL(window.location.href);
-    if (url.searchParams.get("payment") === "success") {
-      setShowSuccessModal(true);
-      refresh();
-      url.searchParams.delete("payment");
-      window.history.replaceState({}, "", url.toString());
-    }
+    if (url.searchParams.get("payment") !== "success") return;
+
+    const orderId = url.searchParams.get("token");
+    url.searchParams.delete("payment");
+    url.searchParams.delete("token");
+    url.searchParams.delete("PayerID");
+    window.history.replaceState({}, "", url.toString());
+
+    if (!orderId) return;
+    fetch("/api/paypal/capture-order", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId }),
+    })
+      .then((r) => r.ok ? r.json() : null)
+      .then((data) => {
+        if (data?.credits) {
+          setShowSuccessModal(true);
+          refresh();
+        }
+      })
+      .catch(() => {});
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
