@@ -23,6 +23,7 @@ interface SeedStory {
   rhyme_scheme: string;
   language: string;
   word_count: number;
+  author?: string;
 }
 
 const stories: SeedStory[] = [
