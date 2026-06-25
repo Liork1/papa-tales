@@ -5,6 +5,7 @@ import type { User } from "./auth";
 
 interface UserProfile {
   stories_generated: number;
+  role: string;
 }
 
 type Tier = "guest" | "free" | "paid";
@@ -14,6 +15,7 @@ interface UserContextValue {
   profile: UserProfile | null;
   credits: number;
   tier: Tier;
+  role: string;
   refresh: () => Promise<void>;
 }
 
@@ -22,6 +24,7 @@ const UserContext = createContext<UserContextValue>({
   profile: null,
   credits: 0,
   tier: "guest",
+  role: "user",
   refresh: async () => {},
 });
 
@@ -37,10 +40,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   const fetchUserData = useCallback(async (uid: string) => {
     const client = getAuthClient();
     const [profileRes, creditsRes] = await Promise.all([
-      client.from("user_profiles").select("stories_generated").eq("id", uid).single(),
-      client.from("user_credits").select("credits_remaining").eq("user_id", uid).single(),
+      client.from("user_profiles").select("stories_generated, role").eq("id", uid).maybeSingle(),
+      client.from("user_credits").select("credits_remaining").eq("user_id", uid).maybeSingle(),
     ]);
-    setProfile(profileRes.data ?? { stories_generated: 0 });
+    setProfile(profileRes.data ?? { stories_generated: 0, role: "user" });
     setCredits(creditsRes.data?.credits_remaining ?? 0);
   }, []);
 
@@ -74,9 +77,10 @@ export function UserProvider({ children }: { children: ReactNode }) {
   }, [fetchUserData]);
 
   const tier: Tier = !user ? "guest" : credits > 0 ? "paid" : "free";
+  const role = profile?.role ?? "user";
 
   return (
-    <UserContext.Provider value={{ user, profile, credits, tier, refresh }}>
+    <UserContext.Provider value={{ user, profile, credits, tier, role, refresh }}>
       {children}
     </UserContext.Provider>
   );
