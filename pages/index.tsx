@@ -130,7 +130,7 @@ async function fetchImage(prompt: string): Promise<string | null> {
 
 const Home: NextPage = () => {
   const router = useRouter();
-  const { user, tier, credits, profile, role, refresh } = useUserContext();
+  const { user, tier, credits, profile, role, ready, refresh } = useUserContext();
   const [showUpgradeModal, setShowUpgradeModal] = useState<null | "creditsWall" | "buySheet">(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [storyUsedCredit, setStoryUsedCredit] = useState(false);
@@ -859,6 +859,7 @@ const Home: NextPage = () => {
               credits={credits}
               profile={profile}
               role={role}
+              ready={ready}
               onSignOut={async () => { await signOut(); refresh(); }}
               onUpgrade={() => setShowUpgradeModal("creditsWall")}
             />
@@ -1179,11 +1180,12 @@ interface FormHeaderProps {
   credits: number;
   profile: { stories_generated: number } | null;
   role: string;
+  ready: boolean;
   onSignOut: () => void;
   onUpgrade: () => void;
 }
 
-function FormHeader({ user, tier, credits, profile, role, onSignOut, onUpgrade }: FormHeaderProps) {
+function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUpgrade }: FormHeaderProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -1245,9 +1247,10 @@ function FormHeader({ user, tier, credits, profile, role, onSignOut, onUpgrade }
           <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, color: "#3a2a5c" }}>
             שלום, {displayName}
           </span>
-          <span style={quotaStyle}>
-            {isCredits ? `✦ ${credits} קרדיטים · סיפור מלא` : `נותרו ${remaining} מתוך 5 · סיפור בסיסי`}
-          </span>
+          {ready
+            ? <span style={quotaStyle}>{isCredits ? `✦ ${credits} קרדיטים · סיפור מלא` : `נותרו ${remaining} מתוך 5 · סיפור בסיסי`}</span>
+            : <span style={{ display: "inline-block", width: 120, height: 14, borderRadius: 99, background: "linear-gradient(90deg,#e8e0f2 25%,#f3eefb 50%,#e8e0f2 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.2s infinite" }}/>
+          }
         </span>
       </span>
 
