@@ -1,23 +1,13 @@
-import { createClient } from "@supabase/supabase-js";
-import * as dotenv from "dotenv";
-import * as path from "path";
+-- Insert טרופותי (bookId 4) by ג'וליה דונלדסון
+-- Run once against the cloud Supabase project.
+-- Uses dollar-quoting to avoid escaping Hebrew apostrophes.
 
-dotenv.config({ path: path.resolve(process.cwd(), ".env") });
-
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY ?? process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-
-if (!supabaseUrl || !supabaseKey) {
-  console.error("Missing NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY in .env");
-  process.exit(1);
-}
-
-const supabase = createClient(supabaseUrl, supabaseKey);
-
-const story = {
-  title: "טרופותי",
-  author: "ג׳וליה דונלדסון",
-  content: `פעם היה אריה שאהב רק תות.
+INSERT INTO stories (title, author, content, theme, age_group, keywords, rhyme_scheme, language, word_count)
+VALUES (
+  'טרופותי',
+  'ג׳וליה דונלדסון',
+  $$
+פעם היה אריה שאהב רק תות.
 לא בשר ולא גבינה ,רק תות פשוט.
 לא דיסה ולא קקאו ,רק תות הוא רצה,
 
@@ -111,26 +101,13 @@ const story = {
 
 וכל ילד וילד ענה על השאלה
 
-רק במילה אחת -איזו מילה?... ?`,
-  theme: "learning",
-  age_group: "4-6",
-  keywords: ["הרפתקה", "חיות", "לקח", "אומץ", "עזרה"],
-  rhyme_scheme: "AABB",
-  language: "he",
-  word_count: 318,
-};
-
-async function run() {
-  console.log(`Inserting "${story.title}" by ${story.author}...`);
-
-  const { error } = await supabase.from("stories").insert(story);
-
-  if (error) {
-    console.error("Error inserting story:", error.message);
-    process.exit(1);
-  }
-
-  console.log("Done.");
-}
-
-run();
+רק במילה אחת -איזו מילה?... ?
+  $$,
+  'learning',
+  '4-6',
+  ARRAY['הרפתקה', 'חיות', 'לקח', 'אומץ', 'עזרה'],
+  'AABB',
+  'he',
+  318
+)
+ON CONFLICT DO NOTHING;
