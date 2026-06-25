@@ -130,7 +130,7 @@ async function fetchImage(prompt: string): Promise<string | null> {
 
 const Home: NextPage = () => {
   const router = useRouter();
-  const { user, tier, credits, profile, refresh } = useUserContext();
+  const { user, tier, credits, profile, role, refresh } = useUserContext();
   const [showUpgradeModal, setShowUpgradeModal] = useState<null | "creditsWall" | "buySheet">(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
   const [storyUsedCredit, setStoryUsedCredit] = useState(false);
@@ -858,6 +858,7 @@ const Home: NextPage = () => {
               tier={tier}
               credits={credits}
               profile={profile}
+              role={role}
               onSignOut={async () => { await signOut(); refresh(); }}
               onUpgrade={() => setShowUpgradeModal("creditsWall")}
             />
@@ -1177,11 +1178,12 @@ interface FormHeaderProps {
   tier: "guest" | "free" | "paid";
   credits: number;
   profile: { stories_generated: number } | null;
+  role: string;
   onSignOut: () => void;
   onUpgrade: () => void;
 }
 
-function FormHeader({ user, tier, credits, profile, onSignOut, onUpgrade }: FormHeaderProps) {
+function FormHeader({ user, tier, credits, profile, role, onSignOut, onUpgrade }: FormHeaderProps) {
   const router = useRouter();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -1267,7 +1269,15 @@ function FormHeader({ user, tier, credits, profile, onSignOut, onUpgrade }: Form
           ⋯
         </button>
         {menuOpen && (
-          <div style={{ position: "absolute", top: 40, left: 0, background: "#fff8ef", border: "1.5px solid #e7dccd", borderRadius: 12, boxShadow: "0 8px 24px rgba(10,5,30,.18)", minWidth: 120, zIndex: 100, overflow: "hidden" }}>
+          <div style={{ position: "absolute", top: 40, left: 0, background: "#fff8ef", border: "1.5px solid #e7dccd", borderRadius: 12, boxShadow: "0 8px 24px rgba(10,5,30,.18)", minWidth: 148, zIndex: 100, overflow: "hidden" }}>
+            {role === "admin" && (
+              <button
+                onClick={() => { setMenuOpen(false); router.push("/admin"); }}
+                style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", borderBottom: "1px solid #e7dccd", color: "#553089", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 700, cursor: "pointer", textAlign: "right", direction: "rtl" }}
+              >
+                ⚙ Admin console
+              </button>
+            )}
             <button
               onClick={() => { setMenuOpen(false); onSignOut(); }}
               style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", color: "#6b5a82", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", textAlign: "right", direction: "rtl" }}
