@@ -186,7 +186,7 @@ function BuySheet({
     color: payMethod === "paypal" ? "#2b7a4b" : "#9a6a16",
   };
 
-  const ctaLabel = (payMethod === "paypal" ? "שלמו ב‑PayPal" : "שלמו ב‑ביט") + ` · ${pkg.price}$`;
+  const ctaLabel = payMethod === "paypal" ? "שלמו ב‑PayPal" : "שלמו ב‑ביט";
 
   return (
     <div style={{
@@ -239,7 +239,7 @@ function BuySheet({
           : "⏱ אימות התשלום בביט עשוי להימשך עד 24 שעות"}
       </div>
 
-      <button onClick={onPurchase} disabled={loading} style={{ ...GOLD_BTN, opacity: loading ? 0.7 : 1 }}>
+      <button onClick={onPurchase} disabled={loading} dir="rtl" style={{ ...GOLD_BTN, opacity: loading ? 0.7 : 1 }}>
         {loading ? "מעביר לפייפאל…" : ctaLabel}
       </button>
 
