@@ -2,8 +2,8 @@ import type { NextApiRequest, NextApiResponse } from "next";
 
 // ── mocks ─────────────────────────────────────────────────────────────────────
 
-jest.mock("@supabase/ssr", () => ({
-  createServerClient: jest.fn(),
+jest.mock("@/lib/api-auth", () => ({
+  serviceDb: jest.fn(),
 }));
 
 jest.mock("@/lib/ai", () => ({
@@ -24,13 +24,13 @@ jest.mock("@/lib/logger", () => ({
 
 // ── imports (after mocks) ─────────────────────────────────────────────────────
 
-import { createServerClient } from "@supabase/ssr";
+import { serviceDb } from "@/lib/api-auth";
 import { generateStory } from "@/lib/ai";
 import { getContextualStories } from "@/lib/stories";
 import { checkRateLimit } from "@/lib/rate-limit";
 import handler from "@/pages/api/generate-story";
 
-const mockCreateServerClient = createServerClient as jest.Mock;
+const mockServiceDb = serviceDb as jest.Mock;
 const mockGenerateStory = generateStory as jest.Mock;
 const mockGetContextualStories = getContextualStories as jest.Mock;
 const mockCheckRateLimit = checkRateLimit as jest.Mock;
@@ -68,6 +68,11 @@ function makeSupabaseMock({
           ? { stories_generated: storiesGenerated, credits_remaining: creditsRemaining }
           : null,
       }),
+      maybeSingle: jest.fn().mockResolvedValue({
+        data: user
+          ? { stories_generated: storiesGenerated, credits_remaining: creditsRemaining }
+          : null,
+      }),
       update: jest.fn().mockReturnThis(),
       upsert: jest.fn().mockResolvedValue({ error: null }),
       insert: jest.fn().mockResolvedValue({ error: null }),
@@ -75,12 +80,12 @@ function makeSupabaseMock({
   };
 }
 
-function makeReq(body: Record<string, unknown>, method = "POST"): NextApiRequest {
+function makeReq(body: Record<string, unknown>, method = "POST", headers: Record<string, string> = {}): NextApiRequest {
   return {
     method,
     body,
     cookies: {},
-    headers: {},
+    headers,
     socket: { remoteAddress: "127.0.0.1" },
   } as unknown as NextApiRequest;
 }
@@ -106,9 +111,8 @@ beforeEach(() => {
   mockCheckRateLimit.mockReturnValue(ALLOWED_RATE);
   mockGetContextualStories.mockResolvedValue([]);
   mockGenerateStory.mockResolvedValue(GENERATED);
-  mockCreateServerClient.mockReturnValue(makeSupabaseMock());
-  process.env.NEXT_PUBLIC_SUPABASE_URL = "https://test.supabase.co";
-  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY = "test-key";
+  // Default: guest (no user) — serviceDb returns a mock client that won't throw
+  mockServiceDb.mockReturnValue(makeSupabaseMock());
 });
 
 // ── tests ─────────────────────────────────────────────────────────────────────
@@ -210,33 +214,34 @@ describe("POST /api/generate-story", () => {
   });
 
   describe("tier quota enforcement", () => {
+    const authHeaders = { authorization: "Bearer test-token" };
+
     it("returns 402 when a free user has used 5 or more stories", async () => {
-      mockCreateServerClient.mockReturnValue(
+      mockServiceDb.mockReturnValue(
         makeSupabaseMock({ user: { id: "u1" }, storiesGenerated: 5, creditsRemaining: 0 })
       );
       const res = makeRes();
-      await handler(makeReq({ prompt: "ילד קטן אוהב לשחק בגינה", useCredit: false }), res);
+      await handler(makeReq({ prompt: "ילד קטן אוהב לשחק בגינה", useCredit: false }, "POST", authHeaders), res);
       expect(res._status).toBe(402);
       expect((res._json as { error: { code: string } }).error.code).toBe("QUOTA_EXCEEDED");
     });
 
     it("returns 402 when a user requests a credit story but has no credits", async () => {
-      mockCreateServerClient.mockReturnValue(
+      mockServiceDb.mockReturnValue(
         makeSupabaseMock({ user: { id: "u1" }, storiesGenerated: 3, creditsRemaining: 0 })
       );
       const res = makeRes();
-      await handler(makeReq({ prompt: "ילד קטן אוהב לשחק בגינה", useCredit: true }), res);
+      await handler(makeReq({ prompt: "ילד קטן אוהב לשחק בגינה", useCredit: true }, "POST", authHeaders), res);
       expect(res._status).toBe(402);
       expect((res._json as { error: { code: string } }).error.code).toBe("NO_CREDITS");
     });
 
     it("deducts a credit and marks usedCredit=true when the user has credits", async () => {
-      const supabaseMock = makeSupabaseMock({ user: { id: "u1" }, storiesGenerated: 1, creditsRemaining: 3 });
-      mockCreateServerClient.mockReturnValue(supabaseMock);
-
+      mockServiceDb.mockReturnValue(
+        makeSupabaseMock({ user: { id: "u1" }, storiesGenerated: 1, creditsRemaining: 3 })
+      );
       const res = makeRes();
-      await handler(makeReq({ prompt: "ילד קטן אוהב לשחק בגינה", useCredit: true }), res);
-
+      await handler(makeReq({ prompt: "ילד קטן אוהב לשחק בגינה", useCredit: true }, "POST", authHeaders), res);
       expect(res._status).toBe(200);
       expect((res._json as { data: { usedCredit: boolean } }).data.usedCredit).toBe(true);
     });
