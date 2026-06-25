@@ -1,5 +1,5 @@
 import type { NextApiRequest, NextApiResponse } from "next";
-import { createServerClient } from "@supabase/ssr";
+import { getRequestUser, serviceDb } from "@/lib/api-auth";
 import { randomUUID } from "crypto";
 
 export const config = {
@@ -27,21 +27,9 @@ interface SaveRequest {
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
 
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => Object.entries(req.cookies).map(([name, value]) => ({ name, value: value ?? "" })),
-        setAll: (cookies) => cookies.forEach(({ name, value }) => {
-          res.setHeader("Set-Cookie", `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`);
-        }),
-      },
-    }
-  );
-
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) return res.status(401).json({ error: "Unauthorized" });
+  const user = await getRequestUser(req, res);
+  if (!user) return;
+  const supabase = serviceDb();
 
   const { story, authorName, ageGroup, prompt, images } = req.body as SaveRequest;
 

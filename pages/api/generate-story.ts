@@ -5,7 +5,7 @@ import { getContextualStories } from "@/lib/stories";
 import { t } from "@/lib/i18n";
 import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
-import { createServerClient } from "@supabase/ssr";
+import { serviceDb } from "@/lib/api-auth";
 
 const VALID_AGE_GROUPS = ["2-4", "4-6", "6-8", "8-10"] as const;
 
@@ -73,34 +73,32 @@ export default async function handler(
   }
 
   // ── Tier enforcement ──────────────────────────────────────────────────────
-  const supabase = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll: () => Object.entries(req.cookies).map(([name, value]) => ({ name, value: value ?? "" })),
-        setAll: (cookies) => cookies.forEach(({ name, value }) => {
-          res.setHeader("Set-Cookie", `${name}=${value}; Path=/; HttpOnly; SameSite=Lax`);
-        }),
-      },
+  // Guest requests (no Authorization header) pass through; authenticated
+  // requests are verified via Bearer token.
+  const token = (req.headers.authorization ?? "").replace(/^Bearer\s+/i, "").trim();
+  let user: import("@supabase/supabase-js").User | null = null;
+  if (token) {
+    const { data: { user: u }, error } = await serviceDb().auth.getUser(token);
+    if (error || !u) {
+      return res.status(401).json({ success: false, error: { code: "UNAUTHORIZED", message: "Unauthorized" } });
     }
-  );
+    user = u;
+  }
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const db = serviceDb();
   const useCredit = !!(req.body as GenerateStoryRequest).useCredit;
   let usedCredit = false;
 
   if (user) {
     const [profileRes, creditsRes] = await Promise.all([
-      supabase.from("user_profiles").select("stories_generated").eq("id", user.id).single(),
-      supabase.from("user_credits").select("credits_remaining").eq("user_id", user.id).single(),
+      db.from("user_profiles").select("stories_generated").eq("id", user.id).maybeSingle(),
+      db.from("user_credits").select("credits_remaining").eq("user_id", user.id).maybeSingle(),
     ]);
     const storiesGenerated: number = profileRes.data?.stories_generated ?? 0;
     const creditsRemaining: number = creditsRes.data?.credits_remaining ?? 0;
 
     if (useCredit && creditsRemaining > 0) {
-      // Deduct credit immediately
-      await supabase
+      await db
         .from("user_credits")
         .update({ credits_remaining: creditsRemaining - 1, updated_at: new Date().toISOString() })
         .eq("user_id", user.id);
@@ -215,16 +213,17 @@ export default async function handler(
 
   // Post-generation: increment story count and record the story
   if (user) {
+    const uid = user.id;
     await Promise.all([
       (async () => {
-        const { data } = await supabase.from("user_profiles").select("stories_generated").eq("id", user.id).single();
-        await supabase.from("user_profiles").upsert(
-          { id: user.id, stories_generated: (data?.stories_generated ?? 0) + 1 },
+        const { data } = await db.from("user_profiles").select("stories_generated").eq("id", uid).single();
+        await db.from("user_profiles").upsert(
+          { id: uid, stories_generated: (data?.stories_generated ?? 0) + 1 },
           { onConflict: "id" }
         );
       })(),
-      supabase.from("user_generated_stories").insert({
-        user_id: user.id,
+      db.from("user_generated_stories").insert({
+        user_id: uid,
         used_credit: usedCredit,
         prompt: validRequest.prompt,
         title: generated.title,
