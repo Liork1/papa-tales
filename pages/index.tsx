@@ -127,6 +127,9 @@ async function fetchImage(prompt: string, useCache = false): Promise<string | nu
   }
 }
 
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+
 // ── Component ─────────────────────────────────────────────────────────────────
 
 const Home: NextPage = () => {
@@ -155,17 +158,20 @@ const Home: NextPage = () => {
   const [libSort, setLibSort] = useState<"new" | "old">("new");
   const [libFavOnly, setLibFavOnly] = useState(false);
   const [favorites, setFavorites] = useState<Record<string, boolean>>({});
+  const [navDir, setNavDir] = useState<1 | -1>(1);
   const savedToDbRef = useRef<string | null>(null); // null = unsaved, "saving" = in-flight, uuid = done
 
   const rootRef = useRef<HTMLDivElement>(null);
-  const pageRef = useRef<HTMLDivElement>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const touchStartRef = useRef<number | null>(null);
-  const prevPageRef = useRef(0);
   // Stable refs so event handlers don't stale-close over state
   const phaseRef = useRef(phase);
   const totalRef = useRef(1);
+  const currentPageRef = useRef(0);
+  const imagesRef = useRef<Record<string, ImageState>>({});
   useEffect(() => { phaseRef.current = phase; }, [phase]);
+  useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
+  useEffect(() => { imagesRef.current = images; }, [images]);
 
   const isDesktop = cw >= 1024;
   const isTablet = cw >= 600 && cw < 1024;
@@ -190,7 +196,11 @@ const Home: NextPage = () => {
   // Stable go() using refs to avoid stale closures in event handlers
   const go = useCallback((d: number) => {
     stopSpeech();
-    setCurrentPage((p) => Math.max(0, Math.min(totalRef.current - 1, p + d)));
+    const curr = currentPageRef.current;
+    const next = Math.max(0, Math.min(totalRef.current - 1, curr + d));
+    if (next === curr) return;
+    setNavDir(d > 0 ? 1 : -1);
+    setCurrentPage(next);
   }, []);
 
   // Keyboard + swipe — registered once
@@ -219,22 +229,6 @@ const Home: NextPage = () => {
     };
   }, [go]);
 
-  // Page flip animation
-  useEffect(() => {
-    if (pageRef.current && phase === "reading") {
-      const back = currentPage < prevPageRef.current;
-      try {
-        pageRef.current.animate(
-          [
-            { opacity: 0, transform: `translateX(${back ? -26 : 26}px)` },
-            { opacity: 1, transform: "none" },
-          ],
-          { duration: 380, easing: "cubic-bezier(.22,.61,.36,1)" }
-        );
-      } catch (_) {}
-    }
-    prevPageRef.current = currentPage;
-  }, [currentPage, phase]);
 
   // Cleanup timer on unmount
   useEffect(() => () => {
@@ -1009,8 +1003,8 @@ const Home: NextPage = () => {
 
             {/* Page card */}
             <div
-              ref={pageRef}
-              className={`${styles.pageCard} ${isDesktop ? styles.pageCardDesktop : ""} ${!isDesktop && !isCover ? styles.pageCardColumn : ""}`}
+              key={currentPage}
+              className={`${styles.pageCard} ${isDesktop ? styles.pageCardDesktop : ""} ${!isDesktop && !isCover ? styles.pageCardColumn : ""} ${navDir > 0 ? styles.pageEnterRight : styles.pageEnterLeft}`}
               style={{ aspectRatio: isDesktop ? "16/10" : isCover ? "3/4" : undefined }}
             >
 
@@ -1085,7 +1079,7 @@ const Home: NextPage = () => {
                   </div>
                 )}
 
-            </div>
+              </div>
 
             {/* Controls */}
             <div className={styles.controls}>
