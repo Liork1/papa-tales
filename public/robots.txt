@@ -1,0 +1,7 @@
+User-agent: *
+Allow: /
+Disallow: /admin/
+Disallow: /api/
+Disallow: /auth/callback
+
+Sitemap: https://papa-tales.vercel.app/sitemap.xml

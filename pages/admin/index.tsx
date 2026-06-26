@@ -1,6 +1,7 @@
 import type { NextPage } from "next";
 import { useState, useEffect, useCallback } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import { useUserContext } from "@/lib/user-context";
 import { getAuthClient } from "@/lib/auth";
 import type { AdminUser } from "@/pages/api/admin/users";
@@ -198,8 +199,11 @@ const AdminPage: NextPage = () => {
 
   return (
     <>
+      <Head>
+        <title>ניהול · אבא סיפור</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap');
         @keyframes admRise  { from { opacity:0; transform:translateY(10px); } to { opacity:1; transform:none; } }
         @keyframes admToast { from { opacity:0; transform:translate(-50%,12px); } to { opacity:1; transform:translate(-50%,0); } }
         * { box-sizing:border-box; }
