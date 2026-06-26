@@ -1,8 +1,10 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import sharp from "sharp";
+import { tryReuseImage } from "@/lib/image-reuse";
 
 export interface GenerateImageRequest {
   prompt: string;
+  useCache?: boolean;
 }
 
 export interface GenerateImageResponse {
@@ -34,9 +36,20 @@ export default async function handler(
     return res.status(500).json({ success: false, error: "Missing GOOGLE_API_KEY" });
   }
 
-  const { prompt } = req.body as GenerateImageRequest;
+  const { prompt, useCache } = req.body as GenerateImageRequest;
   if (!prompt) {
     return res.status(400).json({ success: false, error: "Missing prompt" });
+  }
+
+  if (useCache) {
+    try {
+      const reused = await tryReuseImage(prompt);
+      if (reused) {
+        return res.status(200).json({ success: true, ...reused });
+      }
+    } catch {
+      // fall through to Gemini generation
+    }
   }
 
   const model =

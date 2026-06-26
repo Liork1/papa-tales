@@ -110,12 +110,12 @@ function getImageKey(pageKey: string, sortedPageKeys: string[]): string {
   return sortedPageKeys[Math.floor(idx / 3) * 3] ?? sortedPageKeys[0];
 }
 
-async function fetchImage(prompt: string): Promise<string | null> {
+async function fetchImage(prompt: string, useCache = false): Promise<string | null> {
   try {
     const res = await fetch("/api/generate-image", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ prompt }),
+      body: JSON.stringify({ prompt, useCache }),
     });
     const data = await res.json();
     if (data.success && data.imageData) {
@@ -375,9 +375,9 @@ const Home: NextPage = () => {
     setSpeaking(false);
   }
 
-  const loadImage = useCallback(async (key: string, imagePrompt: string) => {
+  const loadImage = useCallback(async (key: string, imagePrompt: string, useCache = false) => {
     setImages((prev) => ({ ...prev, [key]: "loading" }));
-    const url = await fetchImage(imagePrompt);
+    const url = await fetchImage(imagePrompt, useCache);
     setImages((prev) => ({ ...prev, [key]: url ?? "error" }));
   }, []);
 
@@ -465,7 +465,7 @@ const Home: NextPage = () => {
           await Promise.all(
             imageKeys.slice(i, i + 2).map((key) => {
               const p = prompts[key];
-              return p ? loadImage(key, p) : Promise.resolve();
+              return p ? loadImage(key, p, !creditStory) : Promise.resolve();
             })
           );
         }
