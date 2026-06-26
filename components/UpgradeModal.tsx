@@ -10,7 +10,6 @@ const PACKAGES = [
 ] as const;
 
 type PkgId = "p3" | "p6" | "p12";
-type PayMethod = "paypal" | "bit";
 
 const PERKS = [
   "איור צבעוני בכל עמוד (לא רק כריכה)",
@@ -146,48 +145,14 @@ function CreditsWall({
 
 function BuySheet({
   selectedPkg, setSelectedPkg,
-  payMethod, setPayMethod,
   onPurchase, loading, onClose,
 }: {
   selectedPkg: PkgId;
   setSelectedPkg: (id: PkgId) => void;
-  payMethod: PayMethod;
-  setPayMethod: (m: PayMethod) => void;
   onPurchase: () => void;
   loading: boolean;
   onClose: () => void;
 }) {
-  const pkg = PACKAGES.find((p) => p.id === selectedPkg) ?? PACKAGES[1];
-
-  const payCardStyle = (on: boolean): React.CSSProperties => ({
-    display: "flex", alignItems: "center", gap: ".75rem",
-    padding: ".8rem .9rem", borderRadius: 14, cursor: "pointer",
-    marginBottom: ".6rem", transition: "all .15s",
-    border: on ? "2px solid #e7b84e" : "1.5px solid #e7dccd",
-    background: on ? "#fffaf0" : "#fff",
-  });
-
-  const radioStyle = (on: boolean): React.CSSProperties => ({
-    width: 20, height: 20, borderRadius: "50%",
-    border: `2px solid ${on ? "#dca83f" : "#cfc2dd"}`,
-    display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
-  });
-
-  const dotStyle = (on: boolean): React.CSSProperties => ({
-    width: 10, height: 10, borderRadius: "50%",
-    background: on ? "#dca83f" : "transparent",
-  });
-
-  const timingStyle: React.CSSProperties = {
-    display: "flex", alignItems: "center", gap: ".4rem",
-    fontSize: ".82rem", fontWeight: 600, borderRadius: 12,
-    padding: ".6rem .8rem", margin: ".4rem 0 0",
-    background: payMethod === "paypal" ? "#e7f6ec" : "#fdf3df",
-    color: payMethod === "paypal" ? "#2b7a4b" : "#9a6a16",
-  };
-
-  const ctaLabel = payMethod === "paypal" ? "שלמו ב‑PayPal" : "שלמו ב‑ביט";
-
   return (
     <div style={{
       background: "#fff8ef", borderRadius: 24, padding: "2rem 1.8rem",
@@ -203,44 +168,18 @@ function BuySheet({
         כל הסיפורים בחבילה מלאים — איור בכל עמוד והקראה קולית
       </div>
 
-      {/* Payment method */}
-      <div style={{ fontFamily: "'Rubik', sans-serif", fontWeight: 700, color: "#3a2a5c", fontSize: ".95rem", marginBottom: ".7rem" }}>
-        בחרו אמצעי תשלום
-      </div>
-
-      {/* PayPal */}
-      <div onClick={() => setPayMethod("paypal")} style={payCardStyle(payMethod === "paypal")}>
-        <span style={{ display: "flex", alignItems: "center", justifyContent: "center", minWidth: 54, height: 34, background: "#fff", border: "1px solid #e4e7f2", borderRadius: 8, fontFamily: "'Rubik', sans-serif", fontWeight: 800, fontSize: ".92rem", fontStyle: "italic" }}>
-          <span style={{ color: "#003087" }}>Pay</span><span style={{ color: "#009cde" }}>Pal</span>
-        </span>
-        <div style={{ flex: 1, textAlign: "right" }}>
-          <div style={{ fontFamily: "'Rubik', sans-serif", fontWeight: 700, color: "#3a2a5c", fontSize: ".95rem" }}>PayPal</div>
-          <div style={{ fontSize: ".8rem", color: "#2b7a4b", fontWeight: 600 }}>הקרדיטים נטענים מיד</div>
-        </div>
-        <span style={radioStyle(payMethod === "paypal")}><span style={dotStyle(payMethod === "paypal")} /></span>
-      </div>
-
-      {/* Bit */}
-      <div onClick={() => setPayMethod("bit")} style={payCardStyle(payMethod === "bit")}>
-        <span style={{ display: "flex", alignItems: "center", justifyContent: "center", minWidth: 54, height: 34, background: "#00b9c9", borderRadius: 8, color: "#fff", fontFamily: "'Rubik', sans-serif", fontWeight: 800, fontSize: "1rem" }}>
-          bit
-        </span>
-        <div style={{ flex: 1, textAlign: "right" }}>
-          <div style={{ fontFamily: "'Rubik', sans-serif", fontWeight: 700, color: "#3a2a5c", fontSize: ".95rem" }}>ביט</div>
-          <div style={{ fontSize: ".8rem", color: "#9a6a16", fontWeight: 600 }}>הקרדיטים נטענים תוך 24 שעות</div>
-        </div>
-        <span style={radioStyle(payMethod === "bit")}><span style={dotStyle(payMethod === "bit")} /></span>
-      </div>
-
       {/* Timing note */}
-      <div style={timingStyle}>
-        {payMethod === "paypal"
-          ? "✓ הקרדיטים ייטענו מיד עם אישור התשלום"
-          : "⏱ אימות התשלום בביט עשוי להימשך עד 24 שעות"}
+      <div style={{
+        display: "flex", alignItems: "center", gap: ".4rem",
+        fontSize: ".82rem", fontWeight: 600, borderRadius: 12,
+        padding: ".6rem .8rem", margin: ".4rem 0 0",
+        background: "#e7f6ec", color: "#2b7a4b",
+      }}>
+        ✓ הקרדיטים ייטענו מיד עם אישור התשלום
       </div>
 
       <button onClick={onPurchase} disabled={loading} dir="rtl" style={{ ...GOLD_BTN, opacity: loading ? 0.7 : 1 }}>
-        {loading ? "מעביר לפייפאל…" : ctaLabel}
+        {loading ? "מעביר לפייפאל…" : "שלמו ב‑PayPal"}
       </button>
 
       <p style={{ textAlign: "center", fontSize: ".74rem", color: "#b6a48d", margin: ".7rem 0 0" }}>
@@ -266,7 +205,6 @@ interface Props {
 export default function UpgradeModal({ view, onClose }: Props) {
   const [currentView, setCurrentView] = useState<"creditsWall" | "buySheet">(view);
   const [selectedPkg, setSelectedPkg] = useState<PkgId>("p6");
-  const [payMethod, setPayMethod] = useState<PayMethod>("paypal");
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -278,10 +216,6 @@ export default function UpgradeModal({ view, onClose }: Props) {
   }, []);
 
   async function handlePurchase() {
-    if (payMethod === "bit") {
-      alert("תשלום בביט יהיה זמין בקרוב!");
-      return;
-    }
     setLoading(true);
     try {
       const res = await authFetch("/api/paypal/create-order", {
@@ -323,8 +257,6 @@ export default function UpgradeModal({ view, onClose }: Props) {
         <BuySheet
           selectedPkg={selectedPkg}
           setSelectedPkg={setSelectedPkg}
-          payMethod={payMethod}
-          setPayMethod={setPayMethod}
           onPurchase={handlePurchase}
           loading={loading}
           onClose={onClose}
