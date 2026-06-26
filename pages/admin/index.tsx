@@ -22,9 +22,10 @@ const NAV_ON: React.CSSProperties = { ...NAV_BASE, background: "rgba(255,255,255
 const NAV_OFF: React.CSSProperties = { ...NAV_BASE, background: "transparent", color: "rgba(255,255,255,.72)" };
 
 // ── Types ──────────────────────────────────────────────────────────────────────
+type TrendPoint = { guest: number; free: number; credits: number };
 interface Stats {
   totalUsers: number; totalStories: number; activeThisWeek: number;
-  creditsGranted: number; trend: number[];
+  creditsGranted: number; trend: TrendPoint[];
   ageGroups: Record<string, number>; planMix: Record<string, number>;
 }
 interface Grant {
@@ -67,25 +68,39 @@ const USER_COLORS = ["#7a4fb0","#3b82f6","#2ecc71","#ff9f43","#e8745c","#6366f1"
 function userColor(id: string) { return USER_COLORS[id.charCodeAt(0) % USER_COLORS.length]; }
 
 // ── Trend SVG ─────────────────────────────────────────────────────────────────
-function TrendChart({ data }: { data: number[] }) {
+const SERIES = [
+  { key: "credits" as const, label: "Credits", color: "#f0a020" },
+  { key: "free"    as const, label: "Free",    color: AC.main },
+  { key: "guest"   as const, label: "Guest",   color: "#c4b5e0" },
+] as const;
+
+function TrendChart({ data }: { data: TrendPoint[] }) {
   if (!data.length) return null;
   const W = 660, H = 220, padT = 18, padB = 24, padX = 4;
   const n = data.length;
-  const max = Math.max(...data, 1), min = Math.min(...data);
-  const rng = (max - min) || 1;
+  const allVals = data.flatMap(p => [p.guest, p.free, p.credits]);
+  const max = Math.max(...allVals, 1);
   const X = (i: number) => padX + i * (W - 2 * padX) / (n - 1);
-  const Y = (v: number) => padT + (1 - (v - min) / rng) * (H - padT - padB);
-  const pts = data.map((v, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(v).toFixed(1)}`).join(" ");
-  const area = pts + ` L${X(n-1).toFixed(1)} ${H - padB} L${X(0).toFixed(1)} ${H - padB} Z`;
+  const Y = (v: number) => padT + (1 - v / max) * (H - padT - padB);
+  const line = (key: typeof SERIES[number]["key"]) =>
+    data.map((p, i) => `${i ? "L" : "M"}${X(i).toFixed(1)} ${Y(p[key]).toFixed(1)}`).join(" ");
   return (
     <svg viewBox={`0 0 ${W} ${H}`} preserveAspectRatio="none" style={{ width: "100%", height: 200, display: "block", overflow: "visible" }}>
       <line x1={4} y1={50} x2={656} y2={50} stroke="#eee7f5" strokeWidth={1}/>
       <line x1={4} y1={98} x2={656} y2={98} stroke="#eee7f5" strokeWidth={1}/>
       <line x1={4} y1={146} x2={656} y2={146} stroke="#eee7f5" strokeWidth={1}/>
       <line x1={4} y1={196} x2={656} y2={196} stroke="#e7e0f2" strokeWidth={1}/>
-      <path d={area} fill={`${AC.main}1f`}/>
-      <path d={pts} fill="none" stroke={AC.main} strokeWidth={2.5} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
-      <circle cx={X(n-1)} cy={Y(data[n-1])} r={4.5} fill={AC.main} stroke="#fff" strokeWidth={2.5} vectorEffect="non-scaling-stroke"/>
+      {SERIES.map(s => {
+        const pts = line(s.key);
+        const last = data[n - 1];
+        return (
+          <g key={s.key}>
+            <path d={pts + ` L${X(n-1).toFixed(1)} ${H - padB} L${X(0).toFixed(1)} ${H - padB} Z`} fill={s.color + "18"}/>
+            <path d={pts} fill="none" stroke={s.color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+            <circle cx={X(n-1)} cy={Y(last[s.key])} r={4} fill={s.color} stroke="#fff" strokeWidth={2} vectorEffect="non-scaling-stroke"/>
+          </g>
+        );
+      })}
     </svg>
   );
 }
@@ -342,13 +357,36 @@ const AdminPage: NextPage = () => {
                         <h3 style={{ fontFamily: "'Rubik',sans-serif", fontWeight: 700, fontSize: "1.05rem", margin: 0, color: "#2a2140" }}>Stories generated</h3>
                         <p style={{ fontSize: ".82rem", color: "#8a7fa6", margin: ".2rem 0 0" }}>Last 30 days · daily</p>
                       </div>
-                      <span style={{ fontFamily: "'Rubik',sans-serif", fontWeight: 700, fontSize: "1.05rem", color: AC.main }}>
-                        {stats?.trend[stats.trend.length - 1] ?? 0}<span style={{ fontSize: ".78rem", color: "#8a7fa6", fontWeight: 600 }}> today</span>
-                      </span>
+                      {(() => {
+                        const today = stats?.trend[stats.trend.length - 1] ?? { guest: 0, free: 0, credits: 0 };
+                        const total = today.guest + today.free + today.credits;
+                        return (
+                          <div style={{ textAlign: "right" }}>
+                            <span style={{ fontFamily: "'Rubik',sans-serif", fontWeight: 700, fontSize: "1.05rem", color: AC.main }}>
+                              {total}<span style={{ fontSize: ".78rem", color: "#8a7fa6", fontWeight: 600 }}> today</span>
+                            </span>
+                            <div style={{ display: "flex", gap: ".7rem", justifyContent: "flex-end", marginTop: ".25rem" }}>
+                              {SERIES.map(s => (
+                                <span key={s.key} style={{ fontSize: ".72rem", fontWeight: 700, color: s.color }}>
+                                  {today[s.key]} {s.label}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        );
+                      })()}
                     </div>
-                    <TrendChart data={stats?.trend ?? Array(30).fill(0)} />
+                    <TrendChart data={stats?.trend ?? Array(30).fill({ guest: 0, free: 0, credits: 0 })} />
                     <div style={{ display: "flex", justifyContent: "space-between", marginTop: ".5rem", fontSize: ".74rem", color: "#aaa0c0", fontWeight: 600 }}>
                       <span>30d ago</span><span>20d</span><span>10d</span><span>Today</span>
+                    </div>
+                    <div style={{ display: "flex", gap: "1.2rem", marginTop: ".8rem", justifyContent: "center" }}>
+                      {SERIES.map(s => (
+                        <span key={s.key} style={{ display: "flex", alignItems: "center", gap: ".35rem", fontSize: ".78rem", color: "#6a5f88", fontWeight: 600 }}>
+                          <span style={{ width: 10, height: 10, borderRadius: "50%", background: s.color, display: "inline-block" }}/>
+                          {s.label}
+                        </span>
+                      ))}
                     </div>
                   </div>
 

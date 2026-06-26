@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     db.from("user_profiles").select("stories_generated, role"),
     db.from("admin_credit_grants").select("amount"),
     db.from("user_generated_stories")
-      .select("created_at")
+      .select("created_at, user_id, used_credit")
       .gte("created_at", new Date(Date.now() - 30 * 86400000).toISOString()),
   ]);
 
@@ -29,11 +29,16 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     u.last_sign_in_at && new Date(u.last_sign_in_at) >= oneWeekAgo
   ).length;
 
-  // 30-day daily story trend
-  const trend = Array(30).fill(0);
+  // 30-day daily story trend, segmented by user type
+  const trend: { guest: number; free: number; credits: number }[] =
+    Array.from({ length: 30 }, () => ({ guest: 0, free: 0, credits: 0 }));
   for (const row of trendRes.data ?? []) {
     const daysAgo = Math.floor((Date.now() - new Date(row.created_at).getTime()) / 86400000);
-    if (daysAgo >= 0 && daysAgo < 30) trend[29 - daysAgo]++;
+    if (daysAgo < 0 || daysAgo >= 30) continue;
+    const idx = 29 - daysAgo;
+    if (!row.user_id) trend[idx].guest++;
+    else if (row.used_credit) trend[idx].credits++;
+    else trend[idx].free++;
   }
 
   // Plan mix: users with credits vs free vs guest (no user_profiles row)
