@@ -71,11 +71,9 @@ const AuthPage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>{isRegister ? "הרשמה" : "כניסה"} · אבא סיפור</title>
-        <meta charSet="utf-8" />
-        <link rel="preconnect" href="https://fonts.googleapis.com" />
-        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="" />
-        <link href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Assistant:wght@400;500;600;700&display=swap" rel="stylesheet" />
+        <title>{isRegister ? "הרשמה לאבא סיפור — קבלו 5 סיפורים חינם" : "כניסה · אבא סיפור"}</title>
+        <meta name="description" content={isRegister ? "הירשמו לאבא סיפור וקבלו 5 סיפורי ילדים מחורזים ומאויירים בחינם." : "היכנסו לחשבון אבא סיפור."} />
+        <meta name="robots" content="noindex, nofollow" />
       </Head>
 
       <div dir="rtl" style={{

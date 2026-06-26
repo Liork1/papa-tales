@@ -1,6 +1,7 @@
 import type { NextPage } from "next";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/router";
+import Head from "next/head";
 import { getAuthClient } from "@/lib/auth";
 
 // createBrowserClient is initialized with detectSessionInUrl: true (the default),
@@ -45,13 +46,19 @@ const AuthCallback: NextPage = () => {
   }, []);
 
   return (
-    <div style={{
-      display: "flex", alignItems: "center", justifyContent: "center",
-      height: "100vh", background: "#160f33",
-      fontFamily: "'Assistant', sans-serif", color: "#fdf3df", fontSize: "1.1rem",
-    }}>
-      מתחבר…
-    </div>
+    <>
+      <Head>
+        <title>מתחבר… · אבא סיפור</title>
+        <meta name="robots" content="noindex, nofollow" />
+      </Head>
+      <div style={{
+        display: "flex", alignItems: "center", justifyContent: "center",
+        height: "100vh", background: "#160f33",
+        fontFamily: "'Assistant', sans-serif", color: "#fdf3df", fontSize: "1.1rem",
+      }}>
+        מתחבר…
+      </div>
+    </>
   );
 };
 

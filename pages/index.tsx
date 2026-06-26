@@ -11,6 +11,7 @@ import { authFetch } from "@/lib/auth-fetch";
 import UpgradeModal from "@/components/UpgradeModal";
 import SuccessModal from "@/components/SuccessModal";
 import TierComparisonModal from "@/components/TierComparisonModal";
+import Image from "next/image";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -585,10 +586,12 @@ const Home: NextPage = () => {
         }}
       />
       {hasRealImage && (
-        <img
+        <Image
           src={imageState as string}
           alt="illustration"
-          className={styles.realImage}
+          fill
+          style={{ objectFit: "cover" }}
+          unoptimized={/^data:/.test(imageState as string)}
         />
       )}
       {imageState === "error" && !isCover && (
@@ -626,9 +629,64 @@ const Home: NextPage = () => {
   return (
     <>
       <Head>
-        <title>אבא סיפור — יוצר סיפורים לילדים</title>
-        <meta name="description" content="יצירת סיפורי ילדים מחורזים ומאויירים בעברית" />
-        <meta charSet="utf-8" />
+        <title>אבא סיפור — יוצר סיפורים לילדים מחורזים ומאויירים</title>
+        <meta name="description" content="צרו סיפורי ילדים מחורזים ומאויירים בעברית תוך שניות. מתאים לגילאי 2–10, עם איורים צבעוניים והקראה קולית. נסו בחינם!" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <meta name="robots" content="index, follow" />
+        <link rel="canonical" href={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/`} />
+
+        {/* Open Graph */}
+        <meta property="og:type" content="website" />
+        <meta property="og:site_name" content="אבא סיפור" />
+        <meta property="og:title" content="אבא סיפור — יוצר סיפורים לילדים מחורזים ומאויירים" />
+        <meta property="og:description" content="צרו סיפורי ילדים מחורזים ומאויירים בעברית תוך שניות. מתאים לגילאי 2–10, עם איורים צבעוניים והקראה קולית." />
+        <meta property="og:url" content={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/`} />
+        <meta property="og:image" content={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/og-image.png`} />
+        <meta property="og:image:width" content="1200" />
+        <meta property="og:image:height" content="630" />
+        <meta property="og:image:alt" content="אבא סיפור — סיפורי ילדים מחורזים ומאויירים" />
+        <meta property="og:locale" content="he_IL" />
+
+        {/* Twitter / X */}
+        <meta name="twitter:card" content="summary_large_image" />
+        <meta name="twitter:title" content="אבא סיפור — יוצר סיפורים לילדים" />
+        <meta name="twitter:description" content="צרו סיפורי ילדים מחורזים ומאויירים בעברית תוך שניות." />
+        <meta name="twitter:image" content={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/og-image.png`} />
+
+        {/* JSON-LD */}
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@graph": [
+                {
+                  "@type": "WebSite",
+                  "@id": `${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/#website`,
+                  "url": `${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/`,
+                  "name": "אבא סיפור",
+                  "description": "יצירת סיפורי ילדים מחורזים ומאויירים בעברית",
+                  "inLanguage": "he",
+                },
+                {
+                  "@type": "SoftwareApplication",
+                  "name": "אבא סיפור",
+                  "applicationCategory": "EducationalApplication",
+                  "operatingSystem": "Web",
+                  "inLanguage": "he",
+                  "description": "צרו סיפורי ילדים מחורזים ומאויירים בעברית תוך שניות. מתאים לגילאי 2–10.",
+                  "url": `${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/`,
+                  "offers": {
+                    "@type": "Offer",
+                    "price": "0",
+                    "priceCurrency": "USD",
+                    "description": "5 סיפורים חינם לאחר הרשמה",
+                  },
+                },
+              ],
+            }),
+          }}
+        />
       </Head>
 
       <div ref={rootRef} className={styles.wrapper}>
@@ -665,7 +723,7 @@ const Home: NextPage = () => {
               <button onClick={openSavedStory} style={{ display: "flex", alignItems: "center", gap: ".85rem", width: "100%", textAlign: "right", background: "#fffdf8", border: "1.5px solid #e7dccd", borderRadius: 18, padding: ".7rem", cursor: "pointer", marginBottom: ".85rem" }}>
                 <span style={{ position: "relative", width: 58, height: 58, borderRadius: 13, overflow: "hidden", flexShrink: 0 }}>
                   {images["cover"] && images["cover"] !== "loading" && images["cover"] !== "error"
-                    ? <img src={images["cover"] as string} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    ? <Image src={images["cover"] as string} alt="" fill style={{ objectFit: "cover" }} unoptimized={/^data:/.test(images["cover"] as string)} />
                     : <div style={{ position: "absolute", inset: 0, background: SCENES[0].bg }} />
                   }
                 </span>
@@ -783,7 +841,7 @@ const Home: NextPage = () => {
               <button onClick={openSavedStory} style={{ display: "flex", alignItems: "center", gap: ".85rem", width: "100%", textAlign: "right", background: "#fffdf8", border: "1.5px solid #e7dccd", borderRadius: 18, padding: ".7rem", cursor: "pointer", marginBottom: ".85rem" }}>
                 <span style={{ position: "relative", width: 58, height: 58, borderRadius: 13, overflow: "hidden", flexShrink: 0 }}>
                   {images["cover"] && images["cover"] !== "loading" && images["cover"] !== "error"
-                    ? <img src={images["cover"] as string} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    ? <Image src={images["cover"] as string} alt="" fill style={{ objectFit: "cover" }} unoptimized={/^data:/.test(images["cover"] as string)} />
                     : <div style={{ position: "absolute", inset: 0, background: SCENES[0].bg }} />
                   }
                 </span>
@@ -1266,7 +1324,7 @@ function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuer
                   style={{ position: "relative", width: 64, height: 64, borderRadius: 14, overflow: "hidden", flexShrink: 0, border: "none", padding: 0, cursor: "pointer", background: "#160f33" }}
                 >
                   {cover
-                    ? <img src={cover} alt="" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", objectFit: "cover", display: "block" }} />
+                    ? <Image src={cover} alt="" fill style={{ objectFit: "cover" }} unoptimized={/^data:/.test(cover)} />
                     : <div style={{ position: "absolute", inset: 0, background: scene.bg }} />
                   }
                   <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "1.15rem", background: "rgba(10,5,30,.22)" }}>▶</span>
