@@ -34,6 +34,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
         locale: "he-IL",
         landing_page: "BILLING",
         user_action: "PAY_NOW",
+        shipping_preference: "NO_SHIPPING",
       },
     }),
   });
