@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { authFetch } from "@/lib/auth-fetch";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -268,6 +268,14 @@ export default function UpgradeModal({ view, onClose }: Props) {
   const [selectedPkg, setSelectedPkg] = useState<PkgId>("p6");
   const [payMethod, setPayMethod] = useState<PayMethod>("paypal");
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    const handlePageShow = (e: PageTransitionEvent) => {
+      if (e.persisted) setLoading(false);
+    };
+    window.addEventListener("pageshow", handlePageShow);
+    return () => window.removeEventListener("pageshow", handlePageShow);
+  }, []);
 
   async function handlePurchase() {
     if (payMethod === "bit") {
