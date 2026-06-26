@@ -10,6 +10,7 @@ import { signOut } from "@/lib/auth";
 import { authFetch } from "@/lib/auth-fetch";
 import UpgradeModal from "@/components/UpgradeModal";
 import SuccessModal from "@/components/SuccessModal";
+import TierComparisonModal from "@/components/TierComparisonModal";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -137,6 +138,7 @@ const Home: NextPage = () => {
   const { user, tier, credits, profile, role, ready, refresh } = useUserContext();
   const [showUpgradeModal, setShowUpgradeModal] = useState<null | "creditsWall" | "buySheet">(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showTierModal, setShowTierModal] = useState(false);
   const [storyUsedCredit, setStoryUsedCredit] = useState(false);
 
   const [phase, setPhase] = useState<Phase>("form");
@@ -845,6 +847,14 @@ const Home: NextPage = () => {
                 הירשמו חינם ל‑5 סיפורים
               </button>
             </p>
+            <div style={{ textAlign: "center", marginTop: ".7rem" }}>
+              <button
+                onClick={() => setShowTierModal(true)}
+                style={{ background: "none", border: "none", color: "#b6a48d", fontFamily: "'Rubik', sans-serif", fontSize: ".8rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, textDecorationColor: "#e0d3c2" }}
+              >
+                השוואת כל המסלולים ›
+              </button>
+            </div>
           </div>
         )}
 
@@ -868,6 +878,15 @@ const Home: NextPage = () => {
             <span className={styles.moonEmoji}>🌙</span>
             <h1 className={styles.appTitle}>אבא סיפור</h1>
             <p className={styles.appSubtitle}>סיפור ילדים מחורז ומאויר — תוך רגע</p>
+
+            <div style={{ textAlign: "center", marginBottom: "1.6rem" }}>
+              <button
+                onClick={() => setShowTierModal(true)}
+                style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, textDecorationColor: "#d9c9ec" }}
+              >
+                מה ההבדל בין סיפור בסיסי למלא? ›
+              </button>
+            </div>
 
             <div className={styles.field}>
               <label className={styles.label}>על מה הסיפור?</label>
@@ -1150,6 +1169,12 @@ const Home: NextPage = () => {
       )}
       {showSuccessModal && (
         <SuccessModal onClose={() => setShowSuccessModal(false)} />
+      )}
+      {showTierModal && (
+        <TierComparisonModal
+          onClose={() => setShowTierModal(false)}
+          onGetCredits={() => { setShowTierModal(false); setShowUpgradeModal("creditsWall"); }}
+        />
       )}
     </>
   );

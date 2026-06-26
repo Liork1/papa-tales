@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { authFetch } from "@/lib/auth-fetch";
+import TierComparisonModal from "@/components/TierComparisonModal";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
 
@@ -84,11 +85,12 @@ function PkgCards({
 // ── Credits Wall ──────────────────────────────────────────────────────────────
 
 function CreditsWall({
-  selectedPkg, onSelectPkg, onClose,
+  selectedPkg, onSelectPkg, onClose, onOpenTiers,
 }: {
   selectedPkg: PkgId;
   onSelectPkg: (id: PkgId) => void;
   onClose: () => void;
+  onOpenTiers: () => void;
 }) {
   return (
     <div style={{
@@ -132,8 +134,14 @@ function CreditsWall({
       </div>
 
       <button
+        onClick={onOpenTiers}
+        style={{ width: "100%", background: "none", border: "none", color: "#bda9d8", fontFamily: "'Assistant', sans-serif", fontSize: ".84rem", fontWeight: 600, cursor: "pointer", marginTop: ".7rem" }}
+      >
+        מה ההבדל בין השכבות? ›
+      </button>
+      <button
         onClick={onClose}
-        style={{ width: "100%", background: "none", border: "none", color: "#9a7fb0", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", marginTop: ".65rem" }}
+        style={{ width: "100%", background: "none", border: "none", color: "#9a7fb0", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", marginTop: ".4rem" }}
       >
         אולי מאוחר יותר
       </button>
@@ -206,6 +214,7 @@ export default function UpgradeModal({ view, onClose }: Props) {
   const [currentView, setCurrentView] = useState<"creditsWall" | "buySheet">(view);
   const [selectedPkg, setSelectedPkg] = useState<PkgId>("p6");
   const [loading, setLoading] = useState(false);
+  const [showTierModal, setShowTierModal] = useState(false);
 
   useEffect(() => {
     const handlePageShow = (e: PageTransitionEvent) => {
@@ -252,6 +261,7 @@ export default function UpgradeModal({ view, onClose }: Props) {
           selectedPkg={selectedPkg}
           onSelectPkg={(id) => { setSelectedPkg(id); setCurrentView("buySheet"); }}
           onClose={onClose}
+          onOpenTiers={() => setShowTierModal(true)}
         />
       ) : (
         <BuySheet
@@ -260,6 +270,12 @@ export default function UpgradeModal({ view, onClose }: Props) {
           onPurchase={handlePurchase}
           loading={loading}
           onClose={onClose}
+        />
+      )}
+      {showTierModal && (
+        <TierComparisonModal
+          onClose={() => setShowTierModal(false)}
+          onGetCredits={() => { setShowTierModal(false); setCurrentView("buySheet"); }}
         />
       )}
     </div>
