@@ -416,6 +416,11 @@
 }
 
 /* ── Page card ── */
+.pageStack {
+  position: relative;
+  width: 100%;
+}
+
 .pageCard {
   position: relative;
   width: 100%;
@@ -423,6 +428,21 @@
   overflow: hidden;
   box-shadow: 0 26px 60px rgba(10,5,30,.55);
   background: #160f33;
+  will-change: transform, opacity;
+}
+
+.pageEnterRight { animation: ptEnterRight 290ms cubic-bezier(.22,.61,.36,1) both; }
+.pageEnterLeft  { animation: ptEnterLeft  290ms cubic-bezier(.22,.61,.36,1) both; }
+
+.pageExitLeft {
+  animation: ptExitLeft 290ms cubic-bezier(.22,.61,.36,1) both;
+  position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  border-radius: 28px; overflow: hidden;
+}
+.pageExitRight {
+  animation: ptExitRight 290ms cubic-bezier(.22,.61,.36,1) both;
+  position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  border-radius: 28px; overflow: hidden;
 }
 
 /* Mobile/tablet inner pages: flex column so text sits below the image */
