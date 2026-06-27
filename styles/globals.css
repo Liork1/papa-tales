@@ -6,6 +6,11 @@
   padding: 0;
 }
 
+html, body {
+  overflow-x: hidden;
+  max-width: 100%;
+}
+
 @keyframes ptSpin {
   to { transform: rotate(360deg); }
 }
