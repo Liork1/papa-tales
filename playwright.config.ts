@@ -30,7 +30,13 @@ export default defineConfig({
     },
     {
       name: "mobile-iphone12",
-      use: { ...devices["iPhone 12 Pro"] },
+      use: {
+        browserName: "chromium",
+        viewport: { width: 390, height: 844 },
+        deviceScaleFactor: 3,
+        isMobile: true,
+        hasTouch: true,
+      },
     },
   ],
 
