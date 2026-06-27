@@ -59,14 +59,12 @@ jobs:
         env:
           # Playwright tests mock all Supabase API calls, so these just need to
           # be non-empty for the Next.js server to start without throwing.
-          # These public vars are baked into the JS bundle at build time —
-          # real values needed so the client can render without errors.
-          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
-          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+          # All values are placeholders — E2E tests mock every network call
+          # so no real keys are needed. Zero GitHub secrets required.
+          NEXT_PUBLIC_SUPABASE_URL: https://placeholder.supabase.co
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: placeholder-anon-key
           NEXT_PUBLIC_APP_URL: http://localhost:3000
           NEXT_PUBLIC_PAYPAL_CLIENT_ID: placeholder
-          # Server-side keys — E2E tests mock all API routes so these are
-          # never actually called and don't need to be real secrets.
           SUPABASE_SERVICE_ROLE_KEY: placeholder
           OPENROUTER_API_KEY: placeholder
           PAYPAL_CLIENT_SECRET: placeholder
