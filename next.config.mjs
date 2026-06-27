@@ -2,6 +2,12 @@
 const nextConfig = {
   reactStrictMode: true,
 
+  i18n: {
+    locales: ["he", "en"],
+    defaultLocale: "he",
+    localeDetection: false,
+  },
+
   images: {
     remotePatterns: [
       { protocol: "https", hostname: "ttdhfujjituqnejdbckz.supabase.co" },
