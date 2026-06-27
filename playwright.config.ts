@@ -34,11 +34,11 @@ export default defineConfig({
     },
   ],
 
-  // Spin up Next.js dev server before running tests
+  // Dev server locally, production build in CI (more stable for snapshots)
   webServer: {
-    command: "npm run dev",
+    command: process.env.CI ? "npm run build && npm start" : "npm run dev",
     url: "http://localhost:3000",
     reuseExistingServer: !process.env.CI,
-    timeout: 60_000,
+    timeout: 120_000,
   },
 });
