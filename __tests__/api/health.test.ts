@@ -17,7 +17,6 @@ describe("GET /api/health", () => {
     "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "SUPABASE_SERVICE_ROLE_KEY",
     "OPENROUTER_API_KEY",
-    "ANTHROPIC_API_KEY",
   ] as const;
 
   beforeEach(() => {
