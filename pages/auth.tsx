@@ -3,11 +3,14 @@ import Head from "next/head";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, getSession } from "@/lib/auth";
+import { useLocale } from "@/lib/i18n";
 
 const ACCENT = { main: "#7a4fb0", deep: "#553089" };
 
 const AuthPage: NextPage = () => {
   const router = useRouter();
+  const T = useLocale();
+  const locale = router.locale ?? "he";
   const { mode: modeParam } = router.query;
 
   const [mode, setMode] = useState<"register" | "signin">("register");
@@ -55,7 +58,7 @@ const AuthPage: NextPage = () => {
   };
 
   const handleForgot = async () => {
-    if (!email) { setError("הכניסו אימייל בשדה למעלה לפני השחזור"); return; }
+    if (!email) { setError(T.authForgotNoEmail); return; }
     setLoading(true);
     await sendPasswordReset(email);
     setForgotSent(true);
@@ -71,12 +74,12 @@ const AuthPage: NextPage = () => {
   return (
     <>
       <Head>
-        <title>{isRegister ? "הרשמה לאבא סיפור — קבלו 5 סיפורים חינם" : "כניסה · אבא סיפור"}</title>
-        <meta name="description" content={isRegister ? "הירשמו לאבא סיפור וקבלו 5 סיפורי ילדים מחורזים ומאויירים בחינם." : "היכנסו לחשבון אבא סיפור."} />
+        <title>{isRegister ? T.authPageTitleRegister : T.authPageTitleSignin}</title>
+        <meta name="description" content={isRegister ? T.authDescRegister : T.authDescSignin} />
         <meta name="robots" content="noindex, nofollow" />
       </Head>
 
-      <div dir="rtl" style={{
+      <div dir={locale === "he" ? "rtl" : "ltr"} style={{
         position: "relative", minHeight: "100vh", width: "100%", boxSizing: "border-box",
         display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center",
         gap: "1.2rem", padding: "2.2rem 1rem", fontFamily: "'Assistant', sans-serif",
@@ -98,10 +101,10 @@ const AuthPage: NextPage = () => {
           </div>
 
           <h1 style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.5rem", fontWeight: 800, color: "#3a2a5c", textAlign: "center", margin: ".2rem 0 .15rem" }}>
-            {isRegister ? "יצירת חשבון" : "כניסה לחשבון"}
+            {isRegister ? T.authHeadingRegister : T.authHeadingSignin}
           </h1>
           <p style={{ fontSize: ".9rem", color: "#9a7fb0", textAlign: "center", marginBottom: "1.5rem", fontWeight: 500 }}>
-            {isRegister ? "הירשמו וקבלו 5 סיפורים חינם" : "טוב לראות אתכם שוב"}
+            {isRegister ? T.authSubRegister : T.authSubSignin}
           </p>
 
           {/* Google */}
@@ -120,20 +123,20 @@ const AuthPage: NextPage = () => {
               <path fill="#FBBC05" d="M3.97 10.72A5.41 5.41 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.05l3.01-2.33z"/>
               <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
             </svg>
-            {isRegister ? "הרשמה עם Google" : "המשך עם Google"}
+            {isRegister ? T.authGoogleRegister : T.authGoogleSignin}
           </button>
 
           {/* Divider */}
           <div style={{ display: "flex", alignItems: "center", gap: ".7rem", margin: "1.2rem 0" }}>
             <span style={{ flex: 1, height: 1, background: "#e7dccd" }} />
-            <span style={{ fontSize: ".8rem", color: "#b6a48d", fontWeight: 600 }}>או</span>
+            <span style={{ fontSize: ".8rem", color: "#b6a48d", fontWeight: 600 }}>{T.authOr}</span>
             <span style={{ flex: 1, height: 1, background: "#e7dccd" }} />
           </div>
 
           {/* Email */}
           <div style={{ marginBottom: ".9rem" }}>
             <label style={{ display: "block", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 600, color: "#5c4a78", marginBottom: ".4rem" }}>
-              אימייל
+              {T.authEmail}
             </label>
             <input
               type="email"
@@ -147,7 +150,7 @@ const AuthPage: NextPage = () => {
           {/* Password */}
           <div style={{ marginBottom: ".9rem" }}>
             <label style={{ display: "block", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 600, color: "#5c4a78", marginBottom: ".4rem" }}>
-              סיסמה
+              {T.authPassword}
             </label>
             <input
               type="password"
@@ -163,21 +166,21 @@ const AuthPage: NextPage = () => {
           {isRegister && (
             <div style={{ marginBottom: ".9rem" }}>
               <label style={{ display: "block", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 600, color: "#5c4a78", marginBottom: ".4rem" }}>
-                שם תצוגה <span style={{ color: "#b6a48d", fontWeight: 500 }}>· אופציונלי</span>
+                {T.authDisplayName} <span style={{ color: "#b6a48d", fontWeight: 500 }}>· {T.optional}</span>
               </label>
               <input
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 maxLength={20}
-                placeholder="איך לפנות אליך?"
-                style={{ width: "100%", boxSizing: "border-box", padding: ".7rem .9rem", border: "1.5px solid #e7dccd", borderRadius: 14, fontSize: "1rem", fontFamily: "'Assistant', sans-serif", background: "#fffdf8", color: "#3a2a1a", direction: "rtl", outline: "none" }}
+                placeholder={T.authDisplayNamePh}
+                style={{ width: "100%", boxSizing: "border-box", padding: ".7rem .9rem", border: "1.5px solid #e7dccd", borderRadius: 14, fontSize: "1rem", fontFamily: "'Assistant', sans-serif", background: "#fffdf8", color: "#3a2a1a", direction: "inherit", outline: "none" }}
               />
               <div style={{ display: "flex", alignItems: "center", gap: ".45rem", marginTop: ".5rem", background: "#f7f2fb", borderRadius: 10, padding: ".45rem .7rem" }}>
-                <span style={{ fontSize: ".72rem", color: "#9a7fb0", fontWeight: 600 }}>כך נפנה אליך:</span>
-                <span style={{ fontSize: ".82rem", color: "#5c4a78", fontWeight: 700 }}>{nm ? `שלום, ${nm}` : "שלום! 🌙"}</span>
+                <span style={{ fontSize: ".72rem", color: "#9a7fb0", fontWeight: 600 }}>{T.authDisplayNameSuffix}</span>
+                <span style={{ fontSize: ".82rem", color: "#5c4a78", fontWeight: 700 }}>{nm ? T.hi(nm) : T.authGreetingEmpty}</span>
               </div>
-              <div style={{ fontSize: ".72rem", color: "#b6a48d", marginTop: ".4rem" }}>אפשר להשלים או לשנות מאוחר יותר.</div>
+              <div style={{ fontSize: ".72rem", color: "#b6a48d", marginTop: ".4rem" }}>{T.authDisplayNameNote}</div>
             </div>
           )}
 
@@ -197,7 +200,7 @@ const AuthPage: NextPage = () => {
                 {terms ? "✓" : ""}
               </span>
               <span style={{ fontSize: ".82rem", color: "#6b5a82", lineHeight: 1.5 }}>
-                אני מאשר/ת את <span style={{ color: "#5b37b7", fontWeight: 600 }}>תנאי השימוש</span> ו<span style={{ color: "#5b37b7", fontWeight: 600 }}>מדיניות הפרטיות</span>
+                {T.authTermsAgree} <span style={{ color: "#5b37b7", fontWeight: 600 }}>{T.authTermsService}</span> {T.authTermsAnd}<span style={{ color: "#5b37b7", fontWeight: 600 }}>{T.authTermsPrivacy}</span>
               </span>
             </label>
           )}
@@ -206,13 +209,13 @@ const AuthPage: NextPage = () => {
           {!isRegister && (
             <div style={{ textAlign: "left", margin: "-.2rem 0 1.2rem" }}>
               {forgotSent ? (
-                <span style={{ fontSize: ".82rem", color: "#2ea36b", fontWeight: 600 }}>✓ קישור שחזור נשלח לאימייל</span>
+                <span style={{ fontSize: ".82rem", color: "#2ea36b", fontWeight: 600 }}>{T.authForgotSent}</span>
               ) : (
                 <button
                   onClick={handleForgot}
                   style={{ background: "none", border: "none", color: "#9a7fb0", fontFamily: "'Assistant', sans-serif", fontSize: ".82rem", fontWeight: 600, cursor: "pointer", padding: 0 }}
                 >
-                  שכחתי סיסמה
+                  {T.authForgot}
                 </button>
               )}
             </div>
@@ -238,18 +241,18 @@ const AuthPage: NextPage = () => {
               boxShadow: ctaDisabled ? "none" : `0 10px 24px ${ACCENT.main}55`,
             }}
           >
-            {loading ? "…" : isRegister ? "יצירת חשבון" : "כניסה"}
+            {loading ? "…" : isRegister ? T.authCtaRegister : T.authCtaSignin}
           </button>
 
           {/* Toggle */}
           <p style={{ textAlign: "center", fontSize: ".88rem", color: "#6b5a82", margin: "1.2rem 0 0" }}>
-            {isRegister ? "כבר יש לכם חשבון?" : "אין לכם חשבון עדיין?"}
+            {isRegister ? T.authToggleHaveAccount : T.authToggleNoAccount}
             {" "}
             <button
               onClick={toggleMode}
               style={{ background: "none", border: "none", color: "#5b37b7", fontFamily: "'Rubik', sans-serif", fontSize: ".88rem", fontWeight: 700, cursor: "pointer", padding: "0 .2rem" }}
             >
-              {isRegister ? "כניסה" : "הרשמה"}
+              {isRegister ? T.signIn : T.register}
             </button>
           </p>
         </div>

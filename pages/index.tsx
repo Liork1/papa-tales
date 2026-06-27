@@ -12,6 +12,8 @@ import UpgradeModal from "@/components/UpgradeModal";
 import SuccessModal from "@/components/SuccessModal";
 import TierComparisonModal from "@/components/TierComparisonModal";
 import Image from "next/image";
+import { useLocale } from "@/lib/i18n";
+import LangSwitcher from "@/components/LangSwitcher";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -41,8 +43,6 @@ const AGE_GROUPS = [
   { value: "8-10", label: "8–10" },
 ] as const;
 
-const STAGES = ["חושבים על הרעיון…", "כותבים בחרוזים…", "מציירים את האיורים…"];
-
 const ACCENT = { main: "#7a4fb0", deep: "#553089", soft: "#efe6fb", ink: "#4a2d72" };
 
 const GUEST_DATE_KEY = "papatales_guest_story_date";
@@ -61,17 +61,6 @@ function hoursUntilMidnight(): number {
   return Math.max(1, 24 - new Date().getHours());
 }
 
-const ERROR_SCENARIOS: Record<ErrorScenario, {
-  glyph: string; title: string; message: string;
-  primaryLabel: string; primaryRetry: boolean;
-  secondaryLabel: string | null; showPrompt: boolean;
-}> = {
-  offline: { glyph: "☁", title: "אין חיבור לאינטרנט", message: "לא הצלחנו להתחבר לרשת בזמן יצירת הסיפור. בדקו את החיבור ונסו שוב.", primaryLabel: "נסו שוב", primaryRetry: true, secondaryLabel: "עריכת הבקשה", showPrompt: true },
-  server:  { glyph: "!", title: "משהו השתבש אצלנו", message: "נתקלנו בתקלה זמנית בזמן כתיבת הסיפור. זה כנראה זמני — אפשר לנסות שוב.", primaryLabel: "נסו שוב", primaryRetry: true, secondaryLabel: "עריכת הבקשה", showPrompt: true },
-  timeout: { glyph: "⏱", title: "זה לקח יותר מדי זמן", message: "יצירת הסיפור ארכה זמן רב מהצפוי. רוצים שננסה שוב?", primaryLabel: "נסו שוב", primaryRetry: true, secondaryLabel: "עריכת הבקשה", showPrompt: true },
-  rate:    { glyph: "⋯", title: "יש כרגע הרבה מבקשי סיפורים", message: "השירות עמוס לרגע. נסו שוב בעוד מספר שניות — שווה לחכות.", primaryLabel: "נסו שוב", primaryRetry: true, secondaryLabel: null, showPrompt: false },
-  content: { glyph: "✎", title: "לא הצלחנו ליצור סיפור מהבקשה הזו", message: "אפשר לנסות לנסח את הבקשה קצת אחרת או להוסיף פרטים, וננסה שוב ביחד.", primaryLabel: "עריכת הבקשה", primaryRetry: false, secondaryLabel: null, showPrompt: true },
-};
 
 // 6 scene gradients cycling per page index
 const SCENES = [
@@ -136,6 +125,23 @@ async function fetchImage(prompt: string, useCache = false): Promise<string | nu
 
 const Home: NextPage = () => {
   const router = useRouter();
+  const T = useLocale();
+  const locale = router.locale ?? "he";
+
+  const STAGES = T.stages;
+
+  const ERROR_SCENARIOS: Record<ErrorScenario, {
+    glyph: string; title: string; message: string;
+    primaryLabel: string; primaryRetry: boolean;
+    secondaryLabel: string | null; showPrompt: boolean;
+  }> = {
+    offline: { ...T.errorOffline, primaryRetry: true,  showPrompt: true  },
+    server:  { ...T.errorServer,  primaryRetry: true,  showPrompt: true  },
+    timeout: { ...T.errorTimeout, primaryRetry: true,  showPrompt: true  },
+    rate:    { ...T.errorRate,    primaryRetry: true,  showPrompt: false },
+    content: { ...T.errorContent, primaryRetry: false, showPrompt: true  },
+  };
+
   const { user, tier, credits, profile, role, ready, refresh } = useUserContext();
   const [showUpgradeModal, setShowUpgradeModal] = useState<null | "creditsWall" | "buySheet">(null);
   const [showSuccessModal, setShowSuccessModal] = useState(false);
@@ -546,7 +552,7 @@ const Home: NextPage = () => {
         ? story.title
         : story.pages[sortedPageKeys[currentPage - 1]] ?? "";
     const u = new SpeechSynthesisUtterance(text);
-    u.lang = "he-IL";
+    u.lang = locale === "en" ? "en-US" : "he-IL";
     u.rate = 0.9;
     u.onend = () => setSpeaking(false);
     u.onerror = () => setSpeaking(false);
@@ -564,12 +570,11 @@ const Home: NextPage = () => {
   const hasRealImage =
     imageState != null && imageState !== "loading" && imageState !== "error";
   const pageText = story && !isCover ? story.pages[sortedPageKeys[currentPage - 1]] : "";
-  const authorDisplay = authorName ? `מאת ${authorName}` : "מאת אבא של עמית";
-  const pageLabel = isCover ? "שער" : `${currentPage} / ${total - 1}`;
+  const authorDisplay = authorName ? T.by(authorName) : T.by(T.defaultAuthor);
+  const pageLabel = isCover ? T.cover : T.pageOf(currentPage, total - 1);
   const canGen = prompt.trim().length >= 10;
   const charLen = prompt.length;
-  const counterText =
-    charLen < 10 ? `עוד ${10 - charLen} תווים לפחות` : `${charLen} / 500`;
+  const counterText = charLen < 10 ? T.counterMore(10 - charLen) : T.counterCount(charLen);
 
   // Shared scene block rendered in both compact and desktop
   const SceneLayers = ({ showTag = false }: { showTag?: boolean }) => (
@@ -597,12 +602,12 @@ const Home: NextPage = () => {
       {imageState === "error" && !isCover && (
         <div className={styles.imageErrorOverlay}>
           <span className={styles.imageErrorIcon}>🎨</span>
-          <span className={styles.imageErrorText}>האיור לא נטען</span>
+          <span className={styles.imageErrorText}>{T.imageNotLoaded}</span>
           <button
             className={styles.imageRetryBtn}
             onClick={() => story && loadImage(imageKey, story.illustratedStory[imageKey])}
           >
-            ↻ טעינה מחדש
+            {T.imageRetry}
           </button>
         </div>
       )}
@@ -611,41 +616,41 @@ const Home: NextPage = () => {
         <div className={styles.lockedImageOverlay}>
           <div className={styles.lockedImageContent}>
             <div className={styles.lockedImageIcon}>🔒</div>
-            <div className={styles.lockedImageTitle}>איור מלא לכל עמוד</div>
-            <div className={styles.lockedImageSub}>בסיפורי קרדיט כל עמוד מקבל איור משלו</div>
+            <div className={styles.lockedImageTitle}>{T.lockedImageTitle}</div>
+            <div className={styles.lockedImageSub}>{T.lockedImageSub}</div>
             <button
               className={styles.lockedImageBtn}
               onClick={() => setShowUpgradeModal("buySheet")}
             >
-              שדרגו · 5$
+              {T.lockedImageBtn}
             </button>
           </div>
         </div>
       )}
-      {showTag && <span className={styles.demoTag}>איור · דמו</span>}
+      {showTag && <span className={styles.demoTag}>{T.demoBadge}</span>}
     </>
   );
 
   return (
     <>
       <Head>
-        <title>אבא סיפור — יוצר סיפורים לילדים מחורזים ומאויירים</title>
-        <meta name="description" content="צרו סיפורי ילדים מחורזים ומאויירים בעברית תוך שניות. מתאים לגילאי 2–10, עם איורים צבעוניים והקראה קולית. נסו בחינם!" />
+        <title>{T.appTitle} — {T.subtitle}</title>
+        <meta name="description" content={locale === "he" ? "צרו סיפורי ילדים מחורזים ומאויירים בעברית תוך שניות. מתאים לגילאי 2–10, עם איורים צבעוניים והקראה קולית. נסו בחינם!" : "Create illustrated, rhyming kids' stories in seconds. Ages 2–10, with color illustrations and voice narration. Try free!"} />
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
-        <link rel="canonical" href={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/`} />
+        <link rel="canonical" href={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}${locale === "en" ? "/en" : ""}/`} />
 
         {/* Open Graph */}
         <meta property="og:type" content="website" />
-        <meta property="og:site_name" content="אבא סיפור" />
-        <meta property="og:title" content="אבא סיפור — יוצר סיפורים לילדים מחורזים ומאויירים" />
-        <meta property="og:description" content="צרו סיפורי ילדים מחורזים ומאויירים בעברית תוך שניות. מתאים לגילאי 2–10, עם איורים צבעוניים והקראה קולית." />
-        <meta property="og:url" content={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/`} />
+        <meta property="og:site_name" content={T.appTitle} />
+        <meta property="og:title" content={`${T.appTitle} — ${T.subtitle}`} />
+        <meta property="og:description" content={locale === "he" ? "צרו סיפורי ילדים מחורזים ומאויירים בעברית תוך שניות. מתאים לגילאי 2–10, עם איורים צבעוניים והקראה קולית." : "Create illustrated, rhyming kids' stories in seconds. Ages 2–10, with color illustrations and voice narration."} />
+        <meta property="og:url" content={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}${locale === "en" ? "/en" : ""}/`} />
         <meta property="og:image" content={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}/og-image.png`} />
         <meta property="og:image:width" content="1200" />
         <meta property="og:image:height" content="630" />
-        <meta property="og:image:alt" content="אבא סיפור — סיפורי ילדים מחורזים ומאויירים" />
-        <meta property="og:locale" content="he_IL" />
+        <meta property="og:image:alt" content={`${T.appTitle} — ${T.subtitle}`} />
+        <meta property="og:locale" content={locale === "he" ? "he_IL" : "en_US"} />
 
         {/* Twitter / X */}
         <meta name="twitter:card" content="summary_large_image" />
@@ -696,11 +701,12 @@ const Home: NextPage = () => {
           <div className={styles.formCard}>
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".5rem", paddingBottom: ".95rem", marginBottom: "1.35rem", borderBottom: "1px solid rgba(0,0,0,.06)" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", background: "#efe6fb", borderRadius: 99, padding: ".32rem .7rem", fontSize: ".76rem", fontWeight: 600, color: "#6a4f8c" }}>
-                🌙 מצב אורח
+                {T.guestMode}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
-                <button onClick={() => router.push("/auth?mode=signin")} style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}>כניסה</button>
-                <button onClick={() => router.push("/auth?mode=register")} style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}>הרשמה</button>
+                <LangSwitcher variant="light" />
+                <button onClick={() => router.push("/auth?mode=signin")} style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}>{T.signIn}</button>
+                <button onClick={() => router.push("/auth?mode=register")} style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}>{T.register}</button>
               </span>
             </div>
 
@@ -709,13 +715,13 @@ const Home: NextPage = () => {
                 <div style={{ width: 68, height: 68, borderRadius: "50%", background: "#efe6fb", color: "#4a2d72", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.9rem" }}>🌙</div>
                 <span style={{ position: "absolute", bottom: -2, left: -2, width: 26, height: 26, borderRadius: "50%", background: "#2ecc71", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".82rem", fontWeight: 700, border: "3px solid #fff8ef" }}>✓</span>
               </div>
-              <h1 style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.5rem", fontWeight: 800, color: "#3a2a5c", margin: "0 0 .45rem" }}>הסיפור היומי שלכם מוכן</h1>
+              <h1 style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.5rem", fontWeight: 800, color: "#3a2a5c", margin: "0 0 .45rem" }}>{T.limitTitle}</h1>
               <p style={{ fontSize: ".95rem", lineHeight: 1.6, color: "#6b5a82", margin: "0 auto", maxWidth: 330 }}>
-                במצב אורח אפשר ליצור סיפור אחד בכל יום. סיפור חדש יחכה לכם מחר 🌙
+                {T.limitBody}
               </p>
               <div style={{ display: "inline-flex", alignItems: "center", gap: ".45rem", background: "#fdf3df", color: "#9a6a16", fontWeight: 700, fontSize: ".78rem", padding: ".35rem .85rem", borderRadius: 99, marginTop: ".9rem" }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#e0a83f", display: "inline-block" }} />
-                מתחדש בעוד {hoursUntilMidnight()} שעות
+                {T.resetIn(hoursUntilMidnight())}
               </div>
             </div>
 
@@ -728,23 +734,23 @@ const Home: NextPage = () => {
                   }
                 </span>
                 <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: ".12rem", minWidth: 0, textAlign: "right" }}>
-                  <span style={{ fontSize: ".72rem", fontWeight: 700, color: "#9a7fb0" }}>הסיפור שיצרתם היום</span>
+                  <span style={{ fontSize: ".72rem", fontWeight: 700, color: "#9a7fb0" }}>{T.todayStory}</span>
                   <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.02rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {savedGuestTitle || story.title}
                   </span>
-                  <span style={{ fontSize: ".78rem", color: "#b6a48d" }}>{Object.keys(story.pages).length} עמודים · מאוייר</span>
+                  <span style={{ fontSize: ".78rem", color: "#b6a48d" }}>{T.pagesMeta}</span>
                 </span>
-                <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "#efe6fb", color: "#7a4fb0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.15rem" }}>←</span>
+                <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "#efe6fb", color: "#7a4fb0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.15rem" }}>{T.prevGlyph}</span>
               </button>
             )}
 
             <button onClick={openSavedStory} disabled={!story} style={{ width: "100%", padding: ".95rem", border: "none", borderRadius: 16, color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: "1.05rem", fontWeight: 700, cursor: story ? "pointer" : "not-allowed", opacity: story ? 1 : 0.5, background: `linear-gradient(135deg, ${ACCENT.main}, ${ACCENT.deep})`, boxShadow: `0 10px 24px ${ACCENT.main}55`, marginBottom: "1.35rem" }}>
-              המשיכו לסיפור שלכם →
+              {T.continueStory}
             </button>
 
             <div style={{ display: "flex", alignItems: "center", gap: ".8rem", marginBottom: "1.35rem" }}>
               <span style={{ flex: 1, height: 1, background: "#ece2d4" }} />
-              <span style={{ fontSize: ".8rem", color: "#b6a48d", fontWeight: 600 }}>רוצים עוד עכשיו?</span>
+              <span style={{ fontSize: ".8rem", color: "#b6a48d", fontWeight: 600 }}>{T.wantMore}</span>
               <span style={{ flex: 1, height: 1, background: "#ece2d4" }} />
             </div>
 
@@ -752,26 +758,26 @@ const Home: NextPage = () => {
               <div style={{ display: "flex", alignItems: "center", gap: ".65rem", marginBottom: ".75rem" }}>
                 <span style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>✦</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: "'Rubik', sans-serif", fontWeight: 800, color: "#3a2a5c", fontSize: "1.02rem" }}>קנו קרדיטים — בלי להמתין</div>
-                  <div style={{ fontSize: ".82rem", color: "#8a6a3a", fontWeight: 600 }}>צרו סיפורים מלאים כבר עכשיו</div>
+                  <div style={{ fontFamily: "'Rubik', sans-serif", fontWeight: 800, color: "#3a2a5c", fontSize: "1.02rem" }}>{T.buyNoWait}</div>
+                  <div style={{ fontSize: ".82rem", color: "#8a6a3a", fontWeight: 600 }}>{T.buyNoWaitSub}</div>
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: ".4rem", marginBottom: "1rem" }}>
-                {["איור צבעוני בכל עמוד", "הקראה קולית של הסיפור", "בלי הגבלה יומית"].map((perk) => (
+                {[T.perkImg, T.perkAudio, T.perkNoLimit].map((perk) => (
                   <span key={perk} style={{ display: "flex", alignItems: "center", gap: ".5rem", fontSize: ".86rem", color: "#6b5a82" }}>
                     <span style={{ color: "#dca83f", fontWeight: 700 }}>✦</span> {perk}
                   </span>
                 ))}
               </div>
               <button onClick={() => setShowUpgradeModal("creditsWall")} style={{ width: "100%", padding: ".9rem", border: "none", borderRadius: 14, background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", fontFamily: "'Rubik', sans-serif", fontWeight: 800, fontSize: "1.04rem", cursor: "pointer", boxShadow: "0 10px 22px rgba(220,168,63,.4)" }}>
-                קנו קרדיטים ✦
+                {T.buyCredits}
               </button>
             </div>
 
             <p style={{ textAlign: "center", fontSize: ".82rem", color: "#9a7fb0", margin: "1.05rem 0 0", lineHeight: 1.55 }}>
-              לא רוצים לשלם?{" "}
+              {T.dontPay}{" "}
               <button onClick={() => router.push("/auth?mode=register")} style={{ background: "none", border: "none", color: "#5b37b7", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", padding: 0 }}>
-                הירשמו חינם ל‑5 סיפורים
+                {T.registerFree}
               </button>
             </p>
           </div>
@@ -787,7 +793,7 @@ const Home: NextPage = () => {
               <p className={styles.errorMessage}>{sc.message}</p>
               {sc.showPrompt && appError.savedPrompt && (
                 <div className={styles.savedPromptBox}>
-                  <div className={styles.savedPromptLabel}>הבקשה שלכם נשמרה</div>
+                  <div className={styles.savedPromptLabel}>{T.savedPromptLabel}</div>
                   <div className={styles.savedPromptText}>{appError.savedPrompt}</div>
                 </div>
               )}
@@ -812,11 +818,12 @@ const Home: NextPage = () => {
             {/* Header */}
             <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".5rem", paddingBottom: ".95rem", marginBottom: "1.35rem", borderBottom: "1px solid rgba(0,0,0,.06)" }}>
               <span style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", background: "#efe6fb", borderRadius: 99, padding: ".32rem .7rem", fontSize: ".76rem", fontWeight: 600, color: "#6a4f8c" }}>
-                🌙 מצב אורח
+                {T.guestMode}
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
-                <button onClick={() => router.push("/auth?mode=signin")} style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}>כניסה</button>
-                <button onClick={() => router.push("/auth?mode=register")} style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}>הרשמה</button>
+                <LangSwitcher variant="light" />
+                <button onClick={() => router.push("/auth?mode=signin")} style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}>{T.signIn}</button>
+                <button onClick={() => router.push("/auth?mode=register")} style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}>{T.register}</button>
               </span>
             </div>
 
@@ -826,13 +833,13 @@ const Home: NextPage = () => {
                 <div style={{ width: 68, height: 68, borderRadius: "50%", background: "#efe6fb", color: "#4a2d72", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.9rem" }}>🌙</div>
                 <span style={{ position: "absolute", bottom: -2, left: -2, width: 26, height: 26, borderRadius: "50%", background: "#2ecc71", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontSize: ".82rem", fontWeight: 700, border: "3px solid #fff8ef" }}>✓</span>
               </div>
-              <h1 style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.5rem", fontWeight: 800, color: "#3a2a5c", margin: "0 0 .45rem" }}>הסיפור היומי שלכם מוכן</h1>
+              <h1 style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.5rem", fontWeight: 800, color: "#3a2a5c", margin: "0 0 .45rem" }}>{T.limitTitle}</h1>
               <p style={{ fontSize: ".95rem", lineHeight: 1.6, color: "#6b5a82", margin: "0 auto", maxWidth: 330 }}>
-                במצב אורח אפשר ליצור סיפור אחד בכל יום. סיפור חדש יחכה לכם מחר 🌙
+                {T.limitBody}
               </p>
               <div style={{ display: "inline-flex", alignItems: "center", gap: ".45rem", background: "#fdf3df", color: "#9a6a16", fontWeight: 700, fontSize: ".78rem", padding: ".35rem .85rem", borderRadius: 99, marginTop: ".9rem" }}>
                 <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#e0a83f", display: "inline-block" }} />
-                מתחדש בעוד {hoursUntilMidnight()} שעות
+                {T.resetIn(hoursUntilMidnight())}
               </div>
             </div>
 
@@ -846,13 +853,13 @@ const Home: NextPage = () => {
                   }
                 </span>
                 <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: ".12rem", minWidth: 0, textAlign: "right" }}>
-                  <span style={{ fontSize: ".72rem", fontWeight: 700, color: "#9a7fb0" }}>הסיפור שיצרתם היום</span>
+                  <span style={{ fontSize: ".72rem", fontWeight: 700, color: "#9a7fb0" }}>{T.todayStory}</span>
                   <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.02rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {savedGuestTitle || story.title}
                   </span>
-                  <span style={{ fontSize: ".78rem", color: "#b6a48d" }}>{Object.keys(story.pages).length} עמודים · מאוייר</span>
+                  <span style={{ fontSize: ".78rem", color: "#b6a48d" }}>{T.pagesMeta}</span>
                 </span>
-                <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "#efe6fb", color: "#7a4fb0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.15rem" }}>←</span>
+                <span style={{ flexShrink: 0, width: 34, height: 34, borderRadius: "50%", background: "#efe6fb", color: "#7a4fb0", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.15rem" }}>{T.prevGlyph}</span>
               </button>
             )}
 
@@ -862,13 +869,13 @@ const Home: NextPage = () => {
               disabled={!story}
               style={{ width: "100%", padding: ".95rem", border: "none", borderRadius: 16, color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: "1.05rem", fontWeight: 700, cursor: story ? "pointer" : "not-allowed", opacity: story ? 1 : 0.5, background: `linear-gradient(135deg, ${ACCENT.main}, ${ACCENT.deep})`, boxShadow: `0 10px 24px ${ACCENT.main}55`, marginBottom: "1.35rem" }}
             >
-              המשיכו לסיפור שלכם →
+              {T.continueStory}
             </button>
 
             {/* Divider */}
             <div style={{ display: "flex", alignItems: "center", gap: ".8rem", marginBottom: "1.35rem" }}>
               <span style={{ flex: 1, height: 1, background: "#ece2d4" }} />
-              <span style={{ fontSize: ".8rem", color: "#b6a48d", fontWeight: 600 }}>רוצים עוד עכשיו?</span>
+              <span style={{ fontSize: ".8rem", color: "#b6a48d", fontWeight: 600 }}>{T.wantMore}</span>
               <span style={{ flex: 1, height: 1, background: "#ece2d4" }} />
             </div>
 
@@ -877,12 +884,12 @@ const Home: NextPage = () => {
               <div style={{ display: "flex", alignItems: "center", gap: ".65rem", marginBottom: ".75rem" }}>
                 <span style={{ width: 40, height: 40, borderRadius: "50%", background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "1.2rem", flexShrink: 0 }}>✦</span>
                 <div style={{ flex: 1 }}>
-                  <div style={{ fontFamily: "'Rubik', sans-serif", fontWeight: 800, color: "#3a2a5c", fontSize: "1.02rem" }}>קנו קרדיטים — בלי להמתין</div>
-                  <div style={{ fontSize: ".82rem", color: "#8a6a3a", fontWeight: 600 }}>צרו סיפורים מלאים כבר עכשיו</div>
+                  <div style={{ fontFamily: "'Rubik', sans-serif", fontWeight: 800, color: "#3a2a5c", fontSize: "1.02rem" }}>{T.buyNoWait}</div>
+                  <div style={{ fontSize: ".82rem", color: "#8a6a3a", fontWeight: 600 }}>{T.buyNoWaitSub}</div>
                 </div>
               </div>
               <div style={{ display: "flex", flexDirection: "column", gap: ".4rem", marginBottom: "1rem" }}>
-                {["איור צבעוני בכל עמוד", "הקראה קולית של הסיפור", "בלי הגבלה יומית"].map((perk) => (
+                {[T.perkImg, T.perkAudio, T.perkNoLimit].map((perk) => (
                   <span key={perk} style={{ display: "flex", alignItems: "center", gap: ".5rem", fontSize: ".86rem", color: "#6b5a82" }}>
                     <span style={{ color: "#dca83f", fontWeight: 700 }}>✦</span> {perk}
                   </span>
@@ -892,17 +899,17 @@ const Home: NextPage = () => {
                 onClick={() => setShowUpgradeModal("creditsWall")}
                 style={{ width: "100%", padding: ".9rem", border: "none", borderRadius: 14, background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", fontFamily: "'Rubik', sans-serif", fontWeight: 800, fontSize: "1.04rem", cursor: "pointer", boxShadow: "0 10px 22px rgba(220,168,63,.4)" }}
               >
-                קנו קרדיטים ✦
+                {T.buyCredits}
               </button>
             </div>
 
             <p style={{ textAlign: "center", fontSize: ".82rem", color: "#9a7fb0", margin: "1.05rem 0 0", lineHeight: 1.55 }}>
-              לא רוצים לשלם?{" "}
+              {T.dontPay}{" "}
               <button
                 onClick={() => router.push("/auth?mode=register")}
                 style={{ background: "none", border: "none", color: "#5b37b7", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", padding: 0 }}
               >
-                הירשמו חינם ל‑5 סיפורים
+                {T.registerFree}
               </button>
             </p>
             <div style={{ textAlign: "center", marginTop: ".7rem" }}>
@@ -910,7 +917,7 @@ const Home: NextPage = () => {
                 onClick={() => setShowTierModal(true)}
                 style={{ background: "none", border: "none", color: "#b6a48d", fontFamily: "'Rubik', sans-serif", fontSize: ".8rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, textDecorationColor: "#e0d3c2" }}
               >
-                השוואת כל המסלולים ›
+                {T.compareAll}
               </button>
             </div>
           </div>
@@ -934,23 +941,23 @@ const Home: NextPage = () => {
             />
 
             <span className={styles.moonEmoji}>🌙</span>
-            <h1 className={styles.appTitle}>אבא סיפור</h1>
-            <p className={styles.appSubtitle}>סיפור ילדים מחורז ומאויר — תוך רגע</p>
+            <h1 className={styles.appTitle}>{T.appTitle}</h1>
+            <p className={styles.appSubtitle}>{T.subtitle}</p>
 
             <div style={{ textAlign: "center", marginBottom: "1.6rem" }}>
               <button
                 onClick={() => setShowTierModal(true)}
                 style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, textDecorationColor: "#d9c9ec" }}
               >
-                מה ההבדל בין סיפור בסיסי למלא? ›
+                {T.compareLink}
               </button>
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label}>על מה הסיפור?</label>
+              <label className={styles.label}>{T.qWhat}</label>
               <textarea
                 className={styles.textarea}
-                placeholder="לדוגמה: ילדה קטנה שטסה עם כוכב להרפתקה בין העננים…"
+                placeholder={T.promptPh}
                 value={prompt}
                 onChange={(e) => setPrompt(e.target.value)}
                 maxLength={500}
@@ -959,7 +966,7 @@ const Home: NextPage = () => {
             </div>
 
             <div className={styles.field}>
-              <label className={styles.label}>קבוצת גיל</label>
+              <label className={styles.label}>{T.ageGroup}</label>
               <div className={styles.agePills}>
                 {AGE_GROUPS.map((g) => {
                   const active = g.value === ageGroup;
@@ -988,13 +995,13 @@ const Home: NextPage = () => {
 
             <div className={styles.fieldLast}>
               <label className={styles.label}>
-                שם הכותב/ת{" "}
-                <span className={styles.labelOptional}>· אופציונלי</span>
+                {T.authorLabel}{" "}
+                <span className={styles.labelOptional}>{T.optional}</span>
               </label>
               <input
                 className={styles.input}
                 type="text"
-                placeholder="לדוגמה: אבא של עמית"
+                placeholder={T.authorPh}
                 value={authorName}
                 onChange={(e) => setAuthorName(e.target.value)}
               />
@@ -1012,26 +1019,26 @@ const Home: NextPage = () => {
                 opacity: canGen ? 1 : 0.7,
               }}
             >
-              {tier === "paid" && credits > 0 ? "צרו סיפור מלא ✨" : "צרו סיפור בסיסי ✨"}
+              {tier === "paid" && credits > 0 ? T.genFull : T.genBasic}
             </button>
 
             {!canGen && (
-              <p className={styles.lowCharsHint}>כתבו לפחות 10 תווים כדי להתחיל</p>
+              <p className={styles.lowCharsHint}>{T.lowChars}</p>
             )}
             {canGen && tier !== "paid" && (
               <p style={{ textAlign: "center", fontSize: ".76rem", color: "#b6a48d", marginTop: ".6rem", lineHeight: 1.55 }}>
-                סיפור בסיסי — כריכה מאוירת בלבד, ללא הקראה.{" "}
+                {T.tierHint}{" "}
                 <button
                   onClick={() => setShowUpgradeModal("creditsWall")}
                   style={{ background: "none", border: "none", color: "#b9842a", fontFamily: "'Rubik', sans-serif", fontSize: ".76rem", fontWeight: 700, cursor: "pointer", padding: 0 }}
                 >
-                  שדרגו לסיפור מלא ✦
+                  {T.upgradeInline}
                 </button>
               </p>
             )}
 
             <button className={styles.demoLink} onClick={handleDemo}>
-              דלגו ישר לדוגמת הספר ←
+              {T.skip}
             </button>
           </div>
         )}
@@ -1061,7 +1068,7 @@ const Home: NextPage = () => {
               <div className={styles.spinnerMoon}>🌙</div>
             </div>
             <p className={styles.loadingTitle}>{STAGES[stage]}</p>
-            <p className={styles.loadingHint}>רגע אחד, מכינים לכם משהו יפה…</p>
+            <p className={styles.loadingHint}>{T.genHint}</p>
           </div>
         )}
 
@@ -1072,10 +1079,13 @@ const Home: NextPage = () => {
           >
             {/* Header */}
             <div className={styles.readerHeader}>
-              <span className={styles.readerLogo}>אבא סיפור · 🌙</span>
-              <button className={styles.newStoryBtn} onClick={handleReset}>
-                סיפור חדש
-              </button>
+              <span className={styles.readerLogo}>{T.readerBrand}</span>
+              <span style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
+                <LangSwitcher variant="dark" />
+                <button className={styles.newStoryBtn} onClick={handleReset}>
+                  {T.readerNew}
+                </button>
+              </span>
             </div>
 
             {/* Page card */}
@@ -1095,7 +1105,7 @@ const Home: NextPage = () => {
                       <p className={styles.coverAuthor}>{authorDisplay}</p>
                       <span className={styles.coverDecor}>✦</span>
                       <span className={styles.coverHint}>
-                        הקישו ▶ להקראה · דפדפו להמשך
+                        {T.coverHint}
                       </span>
                     </div>
                   </div>
@@ -1140,7 +1150,7 @@ const Home: NextPage = () => {
                               className={styles.rhymeBadge}
                               style={{ color: ACCENT.ink, background: ACCENT.soft }}
                             >
-                              חריזה · {story.rhymeScheme}
+                              {T.rhymePrefix}{story.rhymeScheme}
                             </span>
                           )}
                           <span className={styles.desktopPageNum}>{pageLabel}</span>
@@ -1165,7 +1175,7 @@ const Home: NextPage = () => {
                 onClick={() => go(-1)}
                 disabled={currentPage === 0}
               >
-                →
+                {T.prevGlyph}
               </button>
 
               <button
@@ -1191,7 +1201,7 @@ const Home: NextPage = () => {
                 onClick={() => go(1)}
                 disabled={currentPage === total - 1}
               >
-                ←
+                {T.nextGlyph}
               </button>
             </div>
 
@@ -1255,6 +1265,7 @@ interface LibraryViewProps {
 }
 
 function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuery, onToggleSort, onToggleFav, onToggleFavId, onOpen, onClose }: LibraryViewProps) {
+  const T = useLocale();
   const q = libQuery.trim();
   let list = library.map((s) => ({ ...s, fav: !!favorites[s.id] }));
   if (q) list = list.filter((s) => s.title.includes(q));
@@ -1272,16 +1283,16 @@ function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuer
       {/* Header */}
       <div style={{ display: "flex", alignItems: "flex-end", justifyContent: "space-between", gap: ".6rem" }}>
         <div style={{ display: "flex", flexDirection: "column" }}>
-          <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.55rem", fontWeight: 800, color: "#fdf3df" }}>הספרייה שלי</span>
+          <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.55rem", fontWeight: 800, color: "#fdf3df" }}>{T.libTitle}</span>
           <span style={{ fontSize: ".85rem", color: "rgba(245,235,220,.6)", fontWeight: 500, marginTop: ".15rem" }}>
-            {library.length} סיפורים שמורים · סיפורי קרדיט
+            {T.libCount(library.length)}
           </span>
         </div>
         <button
           onClick={onClose}
           style={{ background: "rgba(255,255,255,.08)", border: "1.5px solid rgba(255,255,255,.2)", color: "rgba(245,235,220,.88)", padding: ".5rem 1rem", borderRadius: 99, cursor: "pointer", fontFamily: "'Rubik', sans-serif", fontSize: ".85rem", fontWeight: 700, whiteSpace: "nowrap" }}
         >
-          + סיפור חדש
+          {T.newStory}
         </button>
       </div>
 
@@ -1290,10 +1301,10 @@ function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuer
         <span style={{ position: "absolute", right: ".95rem", top: "50%", transform: "translateY(-50%)", fontSize: "1rem", opacity: .55, pointerEvents: "none" }}>🔍</span>
         <input
           type="text"
-          placeholder="חיפוש לפי שם הסיפור…"
+          placeholder={T.searchPh}
           value={libQuery}
           onChange={(e) => onQuery(e.target.value)}
-          style={{ width: "100%", boxSizing: "border-box", padding: ".72rem 2.5rem .72rem 1rem", border: "1.5px solid rgba(255,255,255,.16)", borderRadius: 28, fontSize: ".95rem", fontFamily: "'Assistant', sans-serif", background: "rgba(255,255,255,.07)", color: "#fdf3df", direction: "rtl", outline: "none" }}
+          style={{ width: "100%", boxSizing: "border-box", padding: ".72rem 2.5rem .72rem 1rem", border: "1.5px solid rgba(255,255,255,.16)", borderRadius: 28, fontSize: ".95rem", fontFamily: "'Assistant', sans-serif", background: "rgba(255,255,255,.07)", color: "#fdf3df", direction: "inherit", outline: "none" }}
         />
       </div>
 
@@ -1303,10 +1314,10 @@ function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuer
           onClick={onToggleFav}
           style={libFavOnly ? { ...chipBase, background: "#fbe3ea", color: "#c23a5a", border: "1.5px solid #f3c9d4" } : chipBase}
         >
-          ♥ מועדפים
+          {T.favChip}
         </button>
         <button onClick={onToggleSort} style={chipBase}>
-          {libSort === "new" ? "החדשים קודם ↓" : "הישנים קודם ↑"}
+          {libSort === "new" ? T.sortNew : T.sortOld}
         </button>
       </div>
 
@@ -1334,8 +1345,8 @@ function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuer
                   style={{ flex: 1, textAlign: "right", background: "none", border: "none", cursor: "pointer", padding: 0, minWidth: 0 }}
                 >
                   <span style={{ display: "block", fontFamily: "'Rubik', sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</span>
-                  <span style={{ display: "block", fontSize: ".8rem", color: "#9a7fb0", fontWeight: 600, marginTop: ".18rem" }}>{pageCount} עמודים · גיל {s.age_group}</span>
-                  {s.author_name && <span style={{ display: "block", fontSize: ".76rem", color: "#b6a48d", marginTop: ".1rem" }}>מאת {s.author_name}</span>}
+                  <span style={{ display: "block", fontSize: ".8rem", color: "#9a7fb0", fontWeight: 600, marginTop: ".18rem" }}>{T.storyMeta(pageCount, s.age_group)}</span>
+                  {s.author_name && <span style={{ display: "block", fontSize: ".76rem", color: "#b6a48d", marginTop: ".1rem" }}>{T.by(s.author_name)}</span>}
                 </button>
                 <div style={{ display: "flex", flexDirection: "column", gap: ".4rem", flexShrink: 0 }}>
                   <button
@@ -1354,10 +1365,10 @@ function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuer
         <div style={{ background: "rgba(255,255,255,.05)", border: "1.5px dashed rgba(255,255,255,.18)", borderRadius: 18, padding: "2.3rem 1.4rem", textAlign: "center" }}>
           <div style={{ fontSize: "2rem", marginBottom: ".6rem" }}>{emptyFav ? "♡" : "🔭"}</div>
           <p style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1rem", fontWeight: 700, color: "#fdf3df", margin: "0 0 .35rem" }}>
-            {emptyFav ? "אין עדיין מועדפים" : "לא נמצאו סיפורים"}
+            {emptyFav ? T.emptyFavTitle : T.emptyTitle}
           </p>
           <p style={{ fontSize: ".85rem", color: "rgba(245,235,220,.6)", margin: 0 }}>
-            {emptyFav ? "סמנו ♥ על סיפור כדי לשמור אותו כאן" : (q ? "נסו שם אחר או נקו את החיפוש" : "סיפורים שנוצרו עם קרדיטים יופיעו כאן")}
+            {emptyFav ? T.emptyFavHint : (q ? T.emptyHint : T.emptyLibHint)}
           </p>
         </div>
       )}
@@ -1382,6 +1393,7 @@ interface FormHeaderProps {
 
 function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUpgrade, onOpenBuy, onOpenLibrary }: FormHeaderProps) {
   const router = useRouter();
+  const T = useLocale();
   const [menuOpen, setMenuOpen] = useState(false);
 
   const headerStyle: React.CSSProperties = {
@@ -1397,20 +1409,21 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
     return (
       <div style={headerStyle}>
         <span style={{ display: "inline-flex", alignItems: "center", gap: ".4rem", background: "#efe6fb", borderRadius: 99, padding: ".32rem .7rem", fontSize: ".76rem", fontWeight: 600, color: "#6a4f8c" }}>
-          🌙 מצב אורח
+          {T.guestMode}
         </span>
         <span style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
+          <LangSwitcher variant="light" />
           <button
             onClick={() => router.push("/auth?mode=signin")}
             style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}
           >
-            כניסה
+            {T.signIn}
           </button>
           <button
             onClick={() => router.push("/auth?mode=register")}
             style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}
           >
-            הרשמה
+            {T.register}
           </button>
         </span>
       </div>
@@ -1440,10 +1453,10 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
         </span>
         <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
           <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, color: "#3a2a5c" }}>
-            שלום, {displayName}
+            {T.hi(displayName)}
           </span>
           {ready
-            ? <span style={quotaStyle}>{isCredits ? `✦ ${credits} קרדיטים · סיפור מלא` : `נותרו ${remaining} מתוך 5 · סיפור בסיסי`}</span>
+            ? <span style={quotaStyle}>{isCredits ? T.creditsQuota(credits) : T.basicQuota(remaining)}</span>
             : <span style={{ display: "inline-block", width: 120, height: 14, borderRadius: 99, background: "linear-gradient(90deg,#e8e0f2 25%,#f3eefb 50%,#e8e0f2 75%)", backgroundSize: "200% 100%", animation: "shimmer 1.2s infinite" }}/>
           }
         </span>
@@ -1451,22 +1464,23 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
 
       {/* Right: tier-aware actions + menu button */}
       <div style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
+        <LangSwitcher variant="light" />
         {tier === "free" && (
           <button
             onClick={onUpgrade}
             style={{ background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", border: "none", borderRadius: 99, padding: ".34rem .72rem", fontFamily: "'Rubik', sans-serif", fontSize: ".74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap" }}
           >
-            שדרגו למלא ✦
+            {T.upgradeFull}
           </button>
         )}
         {isCredits && (
           <>
             <button
               onClick={onOpenBuy}
-              title="טעינת קרדיטים"
+              title={T.topUp}
               style={{ background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", border: "none", borderRadius: 99, padding: ".34rem .7rem", fontFamily: "'Rubik', sans-serif", fontSize: ".74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: ".22rem", flexShrink: 0 }}
             >
-              ✦ טעינה
+              {T.topUp}
             </button>
             <button
               onClick={onOpenLibrary}
@@ -1489,16 +1503,16 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
             {role === "admin" && (
               <button
                 onClick={() => { setMenuOpen(false); router.push("/admin"); }}
-                style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", borderBottom: "1px solid #e7dccd", color: "#553089", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 700, cursor: "pointer", textAlign: "right", direction: "rtl" }}
+                style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", borderBottom: "1px solid #e7dccd", color: "#553089", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 700, cursor: "pointer", textAlign: "right", direction: "inherit" }}
               >
                 ⚙ Admin console
               </button>
             )}
             <button
               onClick={() => { setMenuOpen(false); onSignOut(); }}
-              style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", color: "#6b5a82", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", textAlign: "right", direction: "rtl" }}
+              style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", color: "#6b5a82", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", textAlign: "right", direction: "inherit" }}
             >
-              יציאה
+              {T.signOut}
             </button>
           </div>
         )}
