@@ -129,7 +129,12 @@ const AdminPage: NextPage = () => {
   }, [user, role, loading, router]);
 
   const adminFetch = useCallback(async (url: string, options: RequestInit = {}) => {
-    const { data: { session } } = await getAuthClient().auth.getSession();
+    const client = getAuthClient();
+    let { data: { session } } = await client.auth.getSession();
+    if (session?.expires_at && session.expires_at - Math.floor(Date.now() / 1000) < 60) {
+      const { data } = await client.auth.refreshSession();
+      session = data.session;
+    }
     const token = session?.access_token;
     return fetch(url, {
       ...options,
