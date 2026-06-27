@@ -949,7 +949,7 @@ const Home: NextPage = () => {
                 onClick={() => setShowTierModal(true)}
                 style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 600, cursor: "pointer", textDecoration: "underline", textUnderlineOffset: 3, textDecorationColor: "#d9c9ec" }}
               >
-                {T.compareLink}
+                {T.compareLink} ›
               </button>
             </div>
 
@@ -1241,7 +1241,6 @@ const Home: NextPage = () => {
       {showTierModal && (
         <TierComparisonModal
           onClose={() => setShowTierModal(false)}
-          onGetCredits={() => { setShowTierModal(false); setShowUpgradeModal("creditsWall"); }}
         />
       )}
     </>
@@ -1478,9 +1477,9 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
             <button
               onClick={onOpenBuy}
               title={T.topUp}
-              style={{ background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", border: "none", borderRadius: 99, padding: ".34rem .7rem", fontFamily: "'Rubik', sans-serif", fontSize: ".74rem", fontWeight: 700, cursor: "pointer", whiteSpace: "nowrap", display: "flex", alignItems: "center", gap: ".22rem", flexShrink: 0 }}
+              style={{ width: 34, height: 34, borderRadius: "50%", border: "none", background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", fontSize: "1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, flexShrink: 0, boxShadow: "0 3px 8px rgba(217,168,63,.4)" }}
             >
-              {T.topUp}
+              ✦
             </button>
             <button
               onClick={onOpenLibrary}

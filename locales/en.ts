@@ -80,6 +80,43 @@ const en: Locale = {
   cmpSub: "The further you go — the more your story comes alive",
   fullExp: "The full experience",
   gotIt: "Got it",
+  tierData: [
+    {
+      name: "Guest", icon: "🌙",
+      quota: "1 basic story per day · no sign-up",
+      premium: false,
+      features: [
+        { ok: true,  text: "A custom-written rhyming story" },
+        { ok: true,  text: "A color illustrated cover" },
+        { ok: false, text: "Illustrations on inner pages" },
+        { ok: false, text: "Voice narration" },
+        { ok: false, text: "Saving your stories" },
+      ],
+    },
+    {
+      name: "Free account", icon: "🎁",
+      quota: "5 basic stories · after sign-up",
+      premium: false,
+      features: [
+        { ok: true,  text: "Everything in guest mode" },
+        { ok: true,  text: "Stories saved to your library" },
+        { ok: true,  text: "5 stories — no daily wait" },
+        { ok: false, text: "Illustrations on inner pages" },
+        { ok: false, text: "Voice narration" },
+      ],
+    },
+    {
+      name: "Credit holder", icon: "✦",
+      quota: "Full stories · packs from $3",
+      premium: true,
+      features: [
+        { ok: true, text: "A color illustration on every page" },
+        { ok: true, text: "Voice narration of the story" },
+        { ok: true, text: "Saved in your library forever" },
+        { ok: true, text: "A full story per credit · no daily limit" },
+      ],
+    },
+  ],
   // Image states
   imageNotLoaded: "Illustration failed to load",
   imageRetry: "↻ Retry",

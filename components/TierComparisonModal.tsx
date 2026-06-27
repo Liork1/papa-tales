@@ -1,52 +1,14 @@
 import React from "react";
+import { useLocale } from "@/lib/i18n";
 
 interface Props {
   onClose: () => void;
-  onGetCredits?: () => void;
 }
 
-const TIERS = [
-  {
-    name: "אורח",
-    icon: "🌙",
-    quota: "סיפור 1 חינם · ללא הרשמה",
-    premium: false,
-    features: [
-      { ok: true,  text: "סיפור מחורז שנכתב במיוחד" },
-      { ok: true,  text: "כריכה צבעונית מאוירת" },
-      { ok: false, text: "איור בעמודי הפנים" },
-      { ok: false, text: "הקראה קולית" },
-      { ok: false, text: "שמירת הסיפור בחשבון" },
-    ],
-  },
-  {
-    name: "חשבון חינם",
-    icon: "🎁",
-    quota: "5 סיפורים חינם · אחרי הרשמה",
-    premium: false,
-    features: [
-      { ok: true,  text: "5 סיפורים — כולם נשמרים בחשבון" },
-      { ok: true,  text: "סיפור מחורז + כריכה מאוירת" },
-      { ok: true,  text: "חזרה לכל הסיפורים שיצרתם" },
-      { ok: false, text: "איור בעמודי הפנים" },
-      { ok: false, text: "הקראה קולית" },
-    ],
-  },
-  {
-    name: "בעל קרדיטים",
-    icon: "✦",
-    quota: "סיפורים מלאים · חבילות מ‑3$",
-    premium: true,
-    features: [
-      { ok: true, text: "איור צבעוני בכל עמוד" },
-      { ok: true, text: "הקראה קולית של הסיפור" },
-      { ok: true, text: "כל הסיפורים נשמרים לתמיד" },
-      { ok: true, text: "סיפור מלא לכל קרדיט · ללא הגבלת זמן" },
-    ],
-  },
-];
+export default function TierComparisonModal({ onClose }: Props) {
+  const T = useLocale();
+  const tiers = T.tierData;
 
-export default function TierComparisonModal({ onClose, onGetCredits }: Props) {
   return (
     <div
       onClick={onClose}
@@ -86,15 +48,15 @@ export default function TierComparisonModal({ onClose, onGetCredits }: Props) {
 
         <div style={{ textAlign: "center", marginBottom: ".65rem" }}>
           <h2 style={{ fontFamily: "'Rubik', sans-serif", fontWeight: 800, fontSize: "1.2rem", color: "#3a2a5c", margin: 0 }}>
-            מה מקבלים בכל שכבה
+            {T.cmpTitle}
           </h2>
           <p style={{ fontSize: ".8rem", color: "#9a7fb0", margin: ".2rem 0 0" }}>
-            ככל שמתקדמים — הסיפור מקבל יותר חיים
+            {T.cmpSub}
           </p>
         </div>
 
         <div style={{ display: "flex", flexDirection: "column", gap: ".5rem" }}>
-          {TIERS.map((tier) => (
+          {tiers.map((tier) => (
             <div
               key={tier.name}
               style={{
@@ -115,7 +77,7 @@ export default function TierComparisonModal({ onClose, onGetCredits }: Props) {
                   padding: ".18rem .65rem", borderRadius: 99,
                   boxShadow: "0 4px 10px rgba(217,168,63,.45)",
                 }}>
-                  החוויה המלאה
+                  {T.fullExp}
                 </span>
               )}
 
@@ -162,33 +124,18 @@ export default function TierComparisonModal({ onClose, onGetCredits }: Props) {
         </div>
 
         <div style={{ marginTop: ".75rem" }}>
-          {onGetCredits ? (
-            <button
-              onClick={onGetCredits}
-              style={{
-                width: "100%", padding: ".75rem", border: "none", borderRadius: 14,
-                color: "#5a3d0a", fontFamily: "'Rubik', sans-serif",
-                fontSize: "1rem", fontWeight: 700, cursor: "pointer",
-                background: "linear-gradient(135deg,#f3d27a,#dca83f)",
-                boxShadow: "0 10px 24px rgba(217,168,63,.45)",
-              }}
-            >
-              קבלו קרדיטים ✦
-            </button>
-          ) : (
-            <button
-              onClick={onClose}
-              style={{
-                width: "100%", padding: ".75rem", border: "none", borderRadius: 14,
-                color: "#fff", fontFamily: "'Rubik', sans-serif",
-                fontSize: "1rem", fontWeight: 700, cursor: "pointer",
-                background: "linear-gradient(135deg,#7a4fb0,#553089)",
-                boxShadow: "0 10px 24px #7a4fb055",
-              }}
-            >
-              הבנתי
-            </button>
-          )}
+          <button
+            onClick={onClose}
+            style={{
+              width: "100%", padding: ".75rem", border: "none", borderRadius: 14,
+              color: "#fff", fontFamily: "'Rubik', sans-serif",
+              fontSize: "1rem", fontWeight: 700, cursor: "pointer",
+              background: "linear-gradient(135deg,#7a4fb0,#553089)",
+              boxShadow: "0 10px 24px #7a4fb055",
+            }}
+          >
+            {T.gotIt}
+          </button>
         </div>
       </div>
     </div>
