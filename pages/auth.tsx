@@ -28,13 +28,6 @@ const AuthPage: NextPage = () => {
     else if (modeParam === "register") setMode("register");
   }, [modeParam]);
 
-  // Redirect if already signed in
-  useEffect(() => {
-    getSession().then((s) => {
-      if (s) router.replace("/");
-    });
-  }, [router]);
-
   const isRegister = mode === "register";
   const nm = displayName.trim();
   const ctaDisabled = loading || (isRegister && !terms) || !email || !password;
