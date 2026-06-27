@@ -1,6 +1,20 @@
 import type { Config } from "jest";
 
 const config: Config = {
+  // Collect from all source files so uncovered code shows up in the report
+  collectCoverageFrom: [
+    "lib/**/*.{ts,tsx}",
+    "components/**/*.{ts,tsx}",
+    "pages/api/**/*.ts",
+    "pages/auth/**/*.tsx",
+    "locales/**/*.ts",
+    "!**/*.d.ts",
+  ],
+  // Thresholds set at current baseline — raise incrementally as coverage grows
+  coverageThreshold: {
+    global: { statements: 37, branches: 32, functions: 26, lines: 38 },
+  },
+
   projects: [
     {
       displayName: "node",
