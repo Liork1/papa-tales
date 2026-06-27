@@ -1440,18 +1440,18 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
   const isCredits = tier === "paid" && credits > 0;
 
   const quotaStyle: React.CSSProperties = isCredits
-    ? { background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", borderRadius: 99, padding: "1px 8px", fontSize: ".68rem", fontWeight: 700, marginTop: 2, whiteSpace: "nowrap" }
-    : { background: "#efe6fb", color: "#6a4f8c", borderRadius: 99, padding: "1px 8px", fontSize: ".68rem", fontWeight: 700, marginTop: 2, whiteSpace: "nowrap" };
+    ? { background: "linear-gradient(135deg,#f3d27a,#dca83f)", color: "#5a3d0a", borderRadius: 99, padding: "1px 8px", fontSize: ".68rem", fontWeight: 700, marginTop: 2, whiteSpace: "nowrap", display: "inline-block", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" }
+    : { background: "#efe6fb", color: "#6a4f8c", borderRadius: 99, padding: "1px 8px", fontSize: ".68rem", fontWeight: 700, marginTop: 2, whiteSpace: "nowrap", display: "inline-block", maxWidth: "100%", overflow: "hidden", textOverflow: "ellipsis" };
 
   return (
     <div style={headerStyle}>
       {/* Left: avatar + name + quota */}
-      <span style={{ display: "inline-flex", alignItems: "center", gap: ".55rem" }}>
+      <span style={{ display: "inline-flex", alignItems: "center", gap: ".55rem", minWidth: 0 }}>
         <span style={{ width: 34, height: 34, borderRadius: "50%", background: "linear-gradient(135deg,#7a4fb0,#553089)", color: "#fff", display: "flex", alignItems: "center", justifyContent: "center", fontFamily: "'Rubik', sans-serif", fontWeight: 700, fontSize: ".95rem", flexShrink: 0 }}>
           {initial}
         </span>
-        <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15 }}>
-          <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, color: "#3a2a5c" }}>
+        <span style={{ display: "flex", flexDirection: "column", lineHeight: 1.15, minWidth: 0, overflow: "hidden" }}>
+          <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, color: "#3a2a5c", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
             {T.hi(displayName)}
           </span>
           {ready
