@@ -78,6 +78,43 @@ const he = {
   cmpSub: "ככל שמתקדמים — הסיפור מקבל יותר חיים",
   fullExp: "החוויה המלאה",
   gotIt: "הבנתי",
+  tierData: [
+    {
+      name: "אורח", icon: "🌙",
+      quota: "סיפור בסיסי 1 בכל יום · ללא הרשמה",
+      premium: false,
+      features: [
+        { ok: true,  text: "סיפור מחורז שנכתב במיוחד" },
+        { ok: true,  text: "כריכה צבעונית מאוירת" },
+        { ok: false, text: "איור בעמודי הפנים" },
+        { ok: false, text: "הקראה קולית" },
+        { ok: false, text: "שמירת הסיפורים" },
+      ],
+    },
+    {
+      name: "חשבון חינם", icon: "🎁",
+      quota: "5 סיפורים בסיסיים · אחרי הרשמה",
+      premium: false,
+      features: [
+        { ok: true,  text: "כל מה שיש במצב אורח" },
+        { ok: true,  text: "הסיפורים נשמרים בספרייה שלך" },
+        { ok: true,  text: "5 סיפורים — בלי המתנה יומית" },
+        { ok: false, text: "איור בעמודי הפנים" },
+        { ok: false, text: "הקראה קולית" },
+      ],
+    },
+    {
+      name: "בעל קרדיטים", icon: "✦",
+      quota: "סיפורים מלאים · חבילות מ‑3$",
+      premium: true,
+      features: [
+        { ok: true, text: "איור צבעוני בכל עמוד" },
+        { ok: true, text: "הקראה קולית של הסיפור" },
+        { ok: true, text: "נשמרים בספרייה לתמיד" },
+        { ok: true, text: "סיפור מלא לכל קרדיט · ללא הגבלה יומית" },
+      ],
+    },
+  ],
   // Image states
   imageNotLoaded: "האיור לא נטען",
   imageRetry: "↻ טעינה מחדש",

@@ -44,7 +44,7 @@ export default function LangSwitcher({ variant }: LangSwitcherProps) {
   return (
     <div style={{ position: "relative", display: "inline-block" }}>
       <button onClick={() => setOpen((o) => !o)} style={btnStyle}>
-        🌐 {currentLabel} ▾
+        🌐 ▾
       </button>
 
       {open && (

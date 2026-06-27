@@ -275,7 +275,6 @@ export default function UpgradeModal({ view, onClose }: Props) {
       {showTierModal && (
         <TierComparisonModal
           onClose={() => setShowTierModal(false)}
-          onGetCredits={() => { setShowTierModal(false); setCurrentView("buySheet"); }}
         />
       )}
     </div>
