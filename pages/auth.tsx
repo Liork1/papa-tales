@@ -2,7 +2,7 @@ import type { NextPage } from "next";
 import Head from "next/head";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
-import { signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset, getSession } from "@/lib/auth";
+import { signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset } from "@/lib/auth";
 import { useLocale } from "@/lib/i18n";
 
 const ACCENT = { main: "#7a4fb0", deep: "#553089" };
@@ -19,6 +19,7 @@ const AuthPage: NextPage = () => {
   const [displayName, setDisplayName] = useState("");
   const [terms, setTerms] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [forgotSent, setForgotSent] = useState(false);
 
@@ -30,21 +31,38 @@ const AuthPage: NextPage = () => {
 
   const isRegister = mode === "register";
   const nm = displayName.trim();
-  const ctaDisabled = loading || (isRegister && !terms) || !email || !password;
+  const ctaDisabled = loading || googleLoading || (isRegister && !terms) || !email || !password;
 
-  const handleGoogle = () => {
-    signInWithGoogle();
+  const handleGoogle = async () => {
+    if (loading || googleLoading) return;
+    setGoogleLoading(true);
+    setError(null);
+    try {
+      await signInWithGoogle();
+      // signInWithOAuth triggers a browser redirect; if we reach the line below,
+      // the redirect was blocked (e.g. MIUI link interception). Show an error
+      // after a short grace period for slow networks.
+      await new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error("redirect_timeout")), 6000)
+      );
+    } catch {
+      setError(T.authGoogleError);
+      setGoogleLoading(false);
+    }
   };
 
   const handleSubmit = async () => {
     if (ctaDisabled) return;
     setLoading(true);
     setError(null);
+    const timeoutResult = new Promise<{ error: string }>((resolve) =>
+      setTimeout(() => resolve({ error: T.authTimeout }), 15000)
+    );
     if (isRegister) {
-      const { error: err } = await signUpWithEmail(email, password, nm || undefined);
+      const { error: err } = await Promise.race([signUpWithEmail(email, password, nm || undefined), timeoutResult]);
       if (err) { setError(err); setLoading(false); return; }
     } else {
-      const { error: err } = await signInWithEmail(email, password);
+      const { error: err } = await Promise.race([signInWithEmail(email, password), timeoutResult]);
       if (err) { setError(err); setLoading(false); return; }
     }
     router.replace("/");
@@ -103,10 +121,13 @@ const AuthPage: NextPage = () => {
           {/* Google */}
           <button
             onClick={handleGoogle}
+            disabled={loading || googleLoading}
             style={{
               width: "100%", display: "flex", alignItems: "center", justifyContent: "center",
               gap: ".6rem", padding: ".8rem", background: "#fff",
-              border: "1.5px solid #e2d8c8", borderRadius: 14, cursor: "pointer",
+              border: "1.5px solid #e2d8c8", borderRadius: 14,
+              cursor: loading || googleLoading ? "not-allowed" : "pointer",
+              opacity: loading || googleLoading ? 0.6 : 1,
               fontFamily: "'Rubik', sans-serif", fontSize: ".98rem", fontWeight: 600, color: "#3a2a3a",
             }}
           >
@@ -116,7 +137,7 @@ const AuthPage: NextPage = () => {
               <path fill="#FBBC05" d="M3.97 10.72A5.41 5.41 0 0 1 3.68 9c0-.6.1-1.18.29-1.72V4.95H.96A9 9 0 0 0 0 9c0 1.45.35 2.82.96 4.05l3.01-2.33z"/>
               <path fill="#EA4335" d="M9 3.58c1.32 0 2.5.45 3.44 1.35l2.58-2.58C13.46.89 11.43 0 9 0A9 9 0 0 0 .96 4.95l3.01 2.33C4.68 5.16 6.66 3.58 9 3.58z"/>
             </svg>
-            {isRegister ? T.authGoogleRegister : T.authGoogleSignin}
+            {googleLoading ? "…" : isRegister ? T.authGoogleRegister : T.authGoogleSignin}
           </button>
 
           {/* Divider */}

@@ -179,6 +179,8 @@ const en: Locale = {
   authToggleHaveAccount: "Already have an account?",
   authToggleNoAccount: "Don't have an account yet?",
   authForgotNoEmail: "Enter your email above before resetting",
+  authGoogleError: "Google sign-in failed. Please try again or use email.",
+  authTimeout: "The request took too long. Check your connection and try again.",
 };
 
 export default en;
