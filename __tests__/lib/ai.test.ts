@@ -73,7 +73,7 @@ describe("generateStory() — age group in LLM prompt", () => {
       });
 
       it("addresses the audience by its specific age range", async () => {
-        expect(await generate()).toContain(`ages ${ageGroup}`);
+        expect(await generate()).toContain(`aged ${ageGroup}`);
       });
 
       it(`requests ${expectedPageRange} pages`, async () => {
@@ -89,7 +89,7 @@ describe("generateStory() — age group in LLM prompt", () => {
   it("defaults to the 4-6 age group when ageGroup is omitted", async () => {
     await generateStory({ prompt: "ספר על ילד", inspirationalStories: NO_STORIES });
     const prompt = captureSystemPrompt();
-    expect(prompt).toContain("ages 4-6");
+    expect(prompt).toContain("aged 4-6");
     expect(prompt).toContain("EXACTLY 8-10 pages");
     expect(prompt).toContain("maximum 55 words");
   });

@@ -133,44 +133,62 @@ function buildSystemPrompt(
     .map((s, i) => `Story ${i + 1}: "${s.title}"\n${s.content.slice(0, 400)}...`)
     .join("\n\n");
 
-  const AGE_CONFIG: Record<string, { pageRange: string; maxWordsPerPage: number; audienceNote: string; pageNote: string }> = {
-  "2-4": {
-    pageRange: "6-8",
-    maxWordsPerPage: 40,
-    audienceNote:
-      "Toddlers and preschoolers (ages 2-4). Use very simple everyday words, one idea per sentence, lots of repetition, predictable patterns, and concrete actions. Avoid abstract concepts, long explanations, or complex emotions. Focus on safety, fun, and wonder.",
-    pageNote:
-      "Each page should contain a single simple event. Keep pages very short."
-  },
+  type AgeConfig = {
+    pageRange: string;
+    maxWordsPerPage: number;
+    vocabulary: string;
+    sentences: string;
+    plot: string;
+    dialogue: string;
+    emotions: string;
+    pageStyle: string;
+  };
 
-  "4-6": {
-    pageRange: "8-10",
-    maxWordsPerPage: 55,
-    audienceNote:
-      "Young children (ages 4-6). Use simple but varied vocabulary and short sentences. Include a clear beginning, middle, and end. Characters can solve one simple problem. Gentle humor, repeated phrases, and basic dialogue are encouraged.",
-    pageNote:
-      "Each page should move the story forward with one clear action."
-  },
+  const AGE_CONFIG: Record<string, AgeConfig> = {
+    "2-4": {
+      pageRange: "6-8",
+      maxWordsPerPage: 40,
+      vocabulary: "Only the simplest everyday words a toddler already knows. Avoid anything abstract.",
+      sentences: "One short idea per sentence. Heavy repetition and predictable patterns.",
+      plot: "A single tiny problem solved immediately. No subplots, no twists.",
+      dialogue: "One or two words per character turn at most. Optional — silence is fine.",
+      emotions: "Happy, sad, scared, surprised. Nothing more complex.",
+      pageStyle: "One concrete event per page. Keep it very short.",
+    },
+    "4-6": {
+      pageRange: "8-10",
+      maxWordsPerPage: 55,
+      vocabulary: "Simple but varied everyday words. One unfamiliar word is fine if clear from context.",
+      sentences: "Short sentences throughout. Occasional two-part sentence for rhythm.",
+      plot: "One clear problem, one attempt to solve it, satisfying resolution.",
+      dialogue: "Short exchanges that feel playful. Gentle humor welcome.",
+      emotions: "Friendship, fairness, courage, excitement — straightforward feelings.",
+      pageStyle: "Each page moves the story forward with one clear action.",
+    },
+    "6-8": {
+      pageRange: "10-12",
+      maxWordsPerPage: 70,
+      vocabulary: "Rich everyday vocabulary with occasional new words explained naturally by context.",
+      sentences: "Mostly short sentences with some medium-length ones for variety.",
+      plot: "One meaningful conflict, clear resolution, small mystery or surprise.",
+      dialogue: "Dialogue appears regularly and helps reveal character.",
+      emotions: "Disappointment, pride, courage, jealousy, excitement — shown through action.",
+      pageStyle: "Mix action with brief descriptions that stimulate imagination.",
+    },
+    "8-10": {
+      pageRange: "10-12",
+      maxWordsPerPage: 90,
+      vocabulary: "Expressive vocabulary and figurative language used purposefully.",
+      sentences: "Varied sentence structures. Longer sentences for atmosphere, short ones for impact.",
+      plot: "Layered conflict with a twist or clever problem-solving. Characters grow.",
+      dialogue: "Dialogue drives scenes and reveals inner motivation.",
+      emotions: "Nuanced feelings — guilt, longing, determination, moral dilemma.",
+      pageStyle: "Combine action, dialogue, and atmosphere while keeping a brisk pace.",
+    },
+  };
 
-  "6-8": {
-    pageRange: "10-12",
-    maxWordsPerPage: 70,
-    audienceNote:
-      "Early readers (ages 6-8). Use richer vocabulary with occasional new words that are understandable from context. Allow longer sentences, more dialogue, and descriptive language. Introduce a meaningful challenge, simple character growth, and light suspense.",
-    pageNote:
-      "Pages may include both action and brief description."
-  },
-
-  "8-10": {
-    pageRange: "10-12",
-    maxWordsPerPage: 90,
-    audienceNote:
-      "Independent readers (ages 8-10). Use expressive vocabulary, figurative language when appropriate, and varied sentence structures. Develop characters' thoughts and motivations. Include layered humor, stronger emotional moments, and a more satisfying plot with twists or clever problem-solving.",
-    pageNote:
-      "Pages can combine action, dialogue, and atmosphere while keeping a brisk pace."
-  }
-};
-  const { pageRange, maxWordsPerPage, audienceNote, pageNote } = AGE_CONFIG[ageGroup] ?? AGE_CONFIG["4-6"];
+  const cfg = AGE_CONFIG[ageGroup] ?? AGE_CONFIG["4-6"];
+  const { pageRange, maxWordsPerPage } = cfg;
 
   const STYLE_SUFFIX = "watercolor children's book illustration, soft colored pencil linework, warm whimsical lighting, pastel color palette with warm greens and blues, professional picture book art style, NO text, NO letters, NO words, NO signs anywhere in the image";
 
@@ -183,17 +201,24 @@ Your task is TWO things in ONE response:
 
 ALL STORY TEXT MUST BE IN HEBREW (right-to-left, no vowel marks / nikud).
 
-Target audience: ${audienceNote}
+Write for children aged ${ageGroup}.
+
+Vocabulary: ${cfg.vocabulary}
+Sentence style: ${cfg.sentences}
+Plot complexity: ${cfg.plot}
+Dialogue: ${cfg.dialogue}
+Emotional depth: ${cfg.emotions}
+Page style: ${cfg.pageStyle}
 
 Story requirements:
-1. Language must match age group ${ageGroup} as described above.
+1. Apply the writing guidance above on every single page.
 2. RHYMING — most critical. Choose one scheme (AABB or ABAB) and apply consistently on every page:
    - AABB: line 1 rhymes with line 2, line 3 rhymes with line 4
    - ABAB: line 1 rhymes with line 3, line 2 rhymes with line 4
    - True rhyme = final syllable sounds IDENTICAL aloud. Example: sameach / poreach ✓ | sameach / gadol ✗
    - No weak rhymes: same word or only an inflection change is NOT a rhyme.
 3. EXACTLY ${pageRange} pages — no more, no less.
-4. Each page: maximum ${maxWordsPerPage} words. ${pageNote}
+4. Each page: maximum ${maxWordsPerPage} words.
 5. End with a simple positive lesson.
 6. Draw themes from the inspirational stories below.
 7. Write WITHOUT nikud — plain Hebrew only.
