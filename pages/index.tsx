@@ -636,7 +636,6 @@ const Home: NextPage = () => {
       <Head>
         <title>{T.appTitle} — {T.subtitle}</title>
         <meta name="description" content={locale === "he" ? "צרו סיפורי ילדים מחורזים ומאויירים בעברית תוך שניות. מתאים לגילאי 2–10, עם איורים צבעוניים והקראה קולית. נסו בחינם!" : "Create illustrated, rhyming kids' stories in seconds. Ages 2–10, with color illustrations and voice narration. Try free!"} />
-        <meta name="viewport" content="width=device-width, initial-scale=1" />
         <meta name="robots" content="index, follow" />
         <link rel="canonical" href={`${process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app"}${locale === "en" ? "/en" : ""}/`} />
 
