@@ -177,6 +177,8 @@ const he = {
   authToggleHaveAccount: "כבר יש לכם חשבון?",
   authToggleNoAccount: "אין לכם חשבון עדיין?",
   authForgotNoEmail: "הכניסו אימייל בשדה למעלה לפני השחזור",
+  authGoogleError: "כניסה עם Google נכשלה. נסו שנית או השתמשו באימייל.",
+  authTimeout: "הפעולה ארכה זמן רב. בדקו את החיבור לאינטרנט ונסו שנית.",
 };
 
 export default he;
