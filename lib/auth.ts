@@ -1,6 +1,26 @@
 import { createClient } from "@supabase/supabase-js";
 import type { SupabaseClient, User, Session, AuthChangeEvent } from "@supabase/supabase-js";
 
+// MIUI (Xiaomi) and some other browsers block localStorage in privacy mode.
+// sessionStorage survives page-to-page navigation within the same tab (including
+// OAuth redirects), which is all PKCE needs. Falls back to in-memory as last resort.
+function makeSafeStorage(): Storage {
+  if (typeof window === "undefined") {
+    const m: Record<string, string> = {};
+    return { getItem: (k) => m[k] ?? null, setItem: (k, v) => { m[k] = v; }, removeItem: (k) => { delete m[k]; }, clear: () => { Object.keys(m).forEach(k => delete m[k]); }, key: (i) => Object.keys(m)[i] ?? null, get length() { return Object.keys(m).length; } } as Storage;
+  }
+  for (const store of [localStorage, sessionStorage]) {
+    try {
+      store.setItem("__sb_check__", "1");
+      store.removeItem("__sb_check__");
+      return store;
+    } catch { /* blocked — try next */ }
+  }
+  // Both blocked: in-memory (no cross-tab persistence, but OAuth within one tab works)
+  const m: Record<string, string> = {};
+  return { getItem: (k) => m[k] ?? null, setItem: (k, v) => { m[k] = v; }, removeItem: (k) => { delete m[k]; }, clear: () => { Object.keys(m).forEach(k => delete m[k]); }, key: (i) => Object.keys(m)[i] ?? null, get length() { return Object.keys(m).length; } } as Storage;
+}
+
 let browserClient: SupabaseClient | null = null;
 
 export function getAuthClient(): SupabaseClient {
@@ -8,9 +28,7 @@ export function getAuthClient(): SupabaseClient {
     const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
     const key = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
     if (!url || !key) throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
-    // createClient (supabase-js) uses localStorage — more reliable for browser PKCE flows
-    // than createBrowserClient (SSR) which uses cookies and can miss the session cross-origin
-    browserClient = createClient(url, key);
+    browserClient = createClient(url, key, { auth: { storage: makeSafeStorage() } });
   }
   return browserClient;
 }
