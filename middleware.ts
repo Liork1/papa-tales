@@ -2,7 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 
 const VALID_LOCALES = new Set(["he", "en"]);
 
-const SKIP_PREFIXES = ["/api/", "/_next/", "/favicon", "/sitemap", "/robots", "/og-image", "/apple-touch-icon"];
+const SKIP_PREFIXES = [
+  "/api/",
+  "/_next/",
+  "/auth/callback", // OAuth callback — must reach the page exactly as the provider redirected; locale redirect breaks PKCE code exchange
+  "/favicon",
+  "/sitemap",
+  "/robots",
+  "/og-image",
+  "/apple-touch-icon",
+];
 
 function deriveUrlLocale(pathname: string): "he" | "en" {
   return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "he";
