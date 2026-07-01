@@ -54,6 +54,9 @@ const en: Locale = {
   // Library
   libTitle: "My library",
   newStory: "+ New story",
+  deleteStory: "Delete",
+  deleteConfirm: "Delete this story permanently?",
+  backToLib: "My library",
   searchPh: "Search by story title…",
   favChip: "♥ Favorites",
   sortNew: "Newest first ↓",

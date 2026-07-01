@@ -52,6 +52,9 @@ const he = {
   // Library
   libTitle: "הספרייה שלי",
   newStory: "+ סיפור חדש",
+  deleteStory: "מחיקה",
+  deleteConfirm: "למחוק את הסיפור לצמיתות?",
+  backToLib: "הספרייה שלי",
   searchPh: "חיפוש לפי שם הסיפור…",
   favChip: "♥ מועדפים",
   sortNew: "החדשים קודם ↓",
