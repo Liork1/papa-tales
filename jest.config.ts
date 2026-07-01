@@ -28,7 +28,10 @@ const config: Config = {
       testEnvironment: "jsdom",
       testMatch: ["<rootDir>/__tests__/ui/**/*.test.tsx"],
       transform: { "^.+\\.tsx?$": ["ts-jest", { tsconfig: { jsx: "react-jsx" } }] },
-      moduleNameMapper: { "^@/(.*)$": "<rootDir>/$1" },
+      moduleNameMapper: {
+        "^@/.*\\.module\\.css$": "<rootDir>/__mocks__/styleMock.js",
+        "^@/(.*)$": "<rootDir>/$1",
+      },
       setupFilesAfterEnv: ["<rootDir>/jest.setup.ts"],
     },
   ],

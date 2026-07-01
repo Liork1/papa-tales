@@ -1061,7 +1061,7 @@ const Home: NextPage = () => {
             onToggleFavId={(id: string) => setFavorites((prev) => ({ ...prev, [id]: !prev[id] }))}
             onOpen={(s: LibraryStory) => { loadSavedStory(s); }}
             onClose={() => setPhase("form")}
-            onDelete={tier === "paid" ? handleDeleteStory : undefined}
+            onDelete={user ? handleDeleteStory : undefined}
           />
         )}
 
@@ -1087,7 +1087,7 @@ const Home: NextPage = () => {
               <span className={styles.readerLogo}>{T.readerBrand}</span>
               <span style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
                 <LangSwitcher variant="dark" />
-                {user && tier === "paid" && (
+                {user && library.length > 0 && (
                   <button className={styles.newStoryBtn} onClick={() => { stopSpeech(); setPhase("library"); }}>
                     📚 {T.backToLib}
                   </button>
@@ -1274,7 +1274,7 @@ interface LibraryViewProps {
   onDelete?: (id: string) => Promise<void>;
 }
 
-function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuery, onToggleSort, onToggleFav, onToggleFavId, onOpen, onClose, onDelete }: LibraryViewProps) {
+export function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuery, onToggleSort, onToggleFav, onToggleFavId, onOpen, onClose, onDelete }: LibraryViewProps) {
   const [deletingId, setDeletingId] = useState<string | null>(null);
   const T = useLocale();
   const q = libQuery.trim();
