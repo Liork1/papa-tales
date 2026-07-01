@@ -517,6 +517,11 @@ const Home: NextPage = () => {
     setDemoMode(false);
   };
 
+  const handleDeleteStory = async (id: string) => {
+    await authFetch(`/api/stories/delete?id=${id}`, { method: "DELETE" });
+    setLibrary((prev) => prev.filter((s) => s.id !== id));
+  };
+
   const openSavedStory = () => {
     if (!story) return;
     stopSpeech();
@@ -1056,6 +1061,7 @@ const Home: NextPage = () => {
             onToggleFavId={(id: string) => setFavorites((prev) => ({ ...prev, [id]: !prev[id] }))}
             onOpen={(s: LibraryStory) => { loadSavedStory(s); }}
             onClose={() => setPhase("form")}
+            onDelete={tier === "paid" ? handleDeleteStory : undefined}
           />
         )}
 
@@ -1081,6 +1087,11 @@ const Home: NextPage = () => {
               <span className={styles.readerLogo}>{T.readerBrand}</span>
               <span style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
                 <LangSwitcher variant="dark" />
+                {user && tier === "paid" && (
+                  <button className={styles.newStoryBtn} onClick={() => { stopSpeech(); setPhase("library"); }}>
+                    📚 {T.backToLib}
+                  </button>
+                )}
                 <button className={styles.newStoryBtn} onClick={handleReset}>
                   {T.readerNew}
                 </button>
@@ -1260,9 +1271,11 @@ interface LibraryViewProps {
   onToggleFavId: (id: string) => void;
   onOpen: (s: LibraryStory) => void;
   onClose: () => void;
+  onDelete?: (id: string) => Promise<void>;
 }
 
-function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuery, onToggleSort, onToggleFav, onToggleFavId, onOpen, onClose }: LibraryViewProps) {
+function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuery, onToggleSort, onToggleFav, onToggleFavId, onOpen, onClose, onDelete }: LibraryViewProps) {
+  const [deletingId, setDeletingId] = useState<string | null>(null);
   const T = useLocale();
   const q = libQuery.trim();
   let list = library.map((s) => ({ ...s, fav: !!favorites[s.id] }));
@@ -1354,6 +1367,21 @@ function LibraryView({ library, libQuery, libSort, libFavOnly, favorites, onQuer
                   >
                     ♥
                   </button>
+                  {onDelete && (
+                    <button
+                      disabled={deletingId === s.id}
+                      onClick={async () => {
+                        if (!window.confirm(T.deleteConfirm)) return;
+                        setDeletingId(s.id);
+                        await onDelete(s.id);
+                        setDeletingId(null);
+                      }}
+                      title={T.deleteStory}
+                      style={{ width: 38, height: 38, borderRadius: "50%", border: "1.5px solid #e7dccd", background: deletingId === s.id ? "#f5ede8" : "#fffdf8", color: "#c0896e", fontSize: ".95rem", cursor: deletingId === s.id ? "default" : "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1, transition: "all .15s", opacity: deletingId === s.id ? .5 : 1 }}
+                    >
+                      🗑
+                    </button>
+                  )}
                 </div>
               </div>
             );
