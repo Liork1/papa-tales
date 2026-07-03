@@ -87,6 +87,9 @@ export default async function handler(
 
   const db = serviceDb();
   const useCredit = !!(req.body as GenerateStoryRequest).useCredit;
+  const locale = typeof (req.body as GenerateStoryRequest).locale === "string"
+    ? (req.body as GenerateStoryRequest).locale
+    : "he";
   let usedCredit = false;
 
   if (user) {
@@ -181,6 +184,7 @@ export default async function handler(
       prompt: validRequest.prompt,
       inspirationalStories,
       ageGroup: validRequest.ageGroup,
+      locale,
       maxTokens: validRequest.maxLength ? Math.ceil(validRequest.maxLength * 4) : undefined,
     });
     logger.info("ai", "story_generated", {

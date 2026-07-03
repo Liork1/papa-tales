@@ -4,6 +4,7 @@ export interface GenerateStoryRequest {
   theme?: string;
   maxLength?: number;
   useCredit?: boolean;
+  locale?: string;
 }
 
 export interface GenerateStoryResponse {
