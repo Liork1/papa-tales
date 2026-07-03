@@ -86,6 +86,20 @@ const MOCK_STORY: StoryData = {
   illustratedStory: {},
 };
 
+const MOCK_STORY_EN: StoryData = {
+  title: "Oz's Star",
+  pages: {
+    "1": "One quiet night, young Oz looked up high,\nAnd counted the stars in the velvet-dark sky.\nThen — flash! — one came tumbling, all blazing and bright,\n\"I'll find it!\" cried Oz, and he ran through the night!",
+    "2": "He searched through the garden, past blossoms and dew,\nAnd found the small star in the grass, shining blue.\nHe cradled it gently with warm, careful hands —\n\"Hello, little star — I am here, understand?\"",
+    "3": "The star gave a sob, its wings broken and dim,\n\"I've lost all my glow!\" it wept soft on a whim.\nOz thought for a moment... then called out: \"I know!\"\nHe breathed a warm breath — and the star felt its glow.",
+    "4": "The light flooded back — golden, dazzling, and bright!\nThe wings spread like music across the dark night.\n\"Thank you!\" sang the star as it soared through the blue —\nOz cheered from below: \"I'll always love you!\"",
+    "5": "Each night, that same star twinkles soft up above,\nA lantern of friendship, a beacon of love.\nOz snuggles to sleep with a smile on his face —\n\"Goodnight, little star — you light up every place!\"",
+  },
+  rhymeScheme: "AABB",
+  wordCount: 0,
+  illustratedStory: {},
+};
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getScene(idx: number) {
@@ -185,6 +199,13 @@ const Home: NextPage = () => {
   useEffect(() => {
     document.documentElement.dir = locale === "en" ? "ltr" : "rtl";
   }, [locale]);
+
+  // Swap demo story language when locale changes mid-demo
+  useEffect(() => {
+    if (!demoMode) return;
+    stopSpeech();
+    setStory(locale === "en" ? MOCK_STORY_EN : MOCK_STORY);
+  }, [locale, demoMode]);
 
   const isDesktop = cw >= 1024;
   const isTablet = cw >= 600 && cw < 1024;
@@ -498,7 +519,7 @@ const Home: NextPage = () => {
 
   const handleDemo = () => {
     stopSpeech();
-    setStory(MOCK_STORY);
+    setStory(locale === "en" ? MOCK_STORY_EN : MOCK_STORY);
     setImages({
       cover: "/demo/cover.png",
       "1": "/demo/1.png",
@@ -605,7 +626,7 @@ const Home: NextPage = () => {
           alt="illustration"
           fill
           style={{ objectFit: "cover" }}
-          unoptimized={/^data:/.test(imageState as string)}
+          unoptimized={/^(data:|\/demo\/)/.test(imageState as string)}
         />
       )}
       {imageState === "error" && !isCover && (
@@ -769,7 +790,7 @@ const Home: NextPage = () => {
               <button onClick={openSavedStory} style={{ display: "flex", alignItems: "center", gap: ".85rem", width: "100%", textAlign: "start", background: "#fffdf8", border: "1.5px solid #e7dccd", borderRadius: 18, padding: ".7rem", cursor: "pointer", marginBottom: ".85rem" }}>
                 <span style={{ position: "relative", width: 58, height: 58, borderRadius: 13, overflow: "hidden", flexShrink: 0 }}>
                   {images["cover"] && images["cover"] !== "loading" && images["cover"] !== "error"
-                    ? <Image src={images["cover"] as string} alt="" fill style={{ objectFit: "cover" }} unoptimized={/^data:/.test(images["cover"] as string)} />
+                    ? <Image src={images["cover"] as string} alt="" fill style={{ objectFit: "cover" }} unoptimized={/^(data:|\/demo\/)/.test(images["cover"] as string)} />
                     : <div style={{ position: "absolute", inset: 0, background: SCENES[0].bg }} />
                   }
                 </span>
@@ -1263,7 +1284,7 @@ export function LibraryView({ library, libQuery, libSort, libFavOnly, favorites,
                   style={{ position: "relative", width: 64, height: 64, borderRadius: 14, overflow: "hidden", flexShrink: 0, border: "none", padding: 0, cursor: "pointer", background: "#160f33" }}
                 >
                   {cover
-                    ? <Image src={cover} alt="" fill style={{ objectFit: "cover" }} unoptimized={/^data:/.test(cover)} />
+                    ? <Image src={cover} alt="" fill style={{ objectFit: "cover" }} unoptimized={/^(data:|\/demo\/)/.test(cover)} />
                     : <div style={{ position: "absolute", inset: 0, background: scene.bg }} />
                   }
                   <span style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", color: "#fff", fontSize: "1.15rem", background: "rgba(10,5,30,.22)" }}>▶</span>

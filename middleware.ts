@@ -11,6 +11,7 @@ const SKIP_PREFIXES = [
   "/robots",
   "/og-image",
   "/apple-touch-icon",
+  "/demo/",
 ];
 
 function deriveUrlLocale(pathname: string): "he" | "en" {
