@@ -181,6 +181,10 @@ const Home: NextPage = () => {
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
   useEffect(() => { imagesRef.current = images; }, [images]);
+  // _document.tsx only runs on the server; keep the HTML dir attribute in sync for client-side locale switches
+  useEffect(() => {
+    document.documentElement.dir = locale === "en" ? "ltr" : "rtl";
+  }, [locale]);
 
   const isDesktop = cw >= 1024;
   const isTablet = cw >= 600 && cw < 1024;
@@ -415,7 +419,7 @@ const Home: NextPage = () => {
       const res = await authFetch("/api/generate-story", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ prompt: savedPrompt, ageGroup, useCredit }),
+        body: JSON.stringify({ prompt: savedPrompt, ageGroup, useCredit, locale }),
       });
       const data: GenerateStoryResponse = await res.json();
 
@@ -698,7 +702,7 @@ const Home: NextPage = () => {
         />
       </Head>
 
-      <div ref={rootRef} className={styles.wrapper}>
+      <div ref={rootRef} className={styles.wrapper} dir={locale === "en" ? "ltr" : "rtl"}>
 
         {/* ── Daily limit (guest, 1/day) ── */}
         {phase === "limit" && (
@@ -730,14 +734,14 @@ const Home: NextPage = () => {
             </div>
 
             {story && (
-              <button onClick={openSavedStory} style={{ display: "flex", alignItems: "center", gap: ".85rem", width: "100%", textAlign: "right", background: "#fffdf8", border: "1.5px solid #e7dccd", borderRadius: 18, padding: ".7rem", cursor: "pointer", marginBottom: ".85rem" }}>
+              <button onClick={openSavedStory} style={{ display: "flex", alignItems: "center", gap: ".85rem", width: "100%", textAlign: "start", background: "#fffdf8", border: "1.5px solid #e7dccd", borderRadius: 18, padding: ".7rem", cursor: "pointer", marginBottom: ".85rem" }}>
                 <span style={{ position: "relative", width: 58, height: 58, borderRadius: 13, overflow: "hidden", flexShrink: 0 }}>
                   {images["cover"] && images["cover"] !== "loading" && images["cover"] !== "error"
                     ? <Image src={images["cover"] as string} alt="" fill style={{ objectFit: "cover" }} unoptimized={/^data:/.test(images["cover"] as string)} />
                     : <div style={{ position: "absolute", inset: 0, background: SCENES[0].bg }} />
                   }
                 </span>
-                <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: ".12rem", minWidth: 0, textAlign: "right" }}>
+                <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: ".12rem", minWidth: 0, textAlign: "start" }}>
                   <span style={{ fontSize: ".72rem", fontWeight: 700, color: "#9a7fb0" }}>{T.todayStory}</span>
                   <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.02rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {savedGuestTitle || story.title}
@@ -849,14 +853,14 @@ const Home: NextPage = () => {
 
             {/* Story card */}
             {story && (
-              <button onClick={openSavedStory} style={{ display: "flex", alignItems: "center", gap: ".85rem", width: "100%", textAlign: "right", background: "#fffdf8", border: "1.5px solid #e7dccd", borderRadius: 18, padding: ".7rem", cursor: "pointer", marginBottom: ".85rem" }}>
+              <button onClick={openSavedStory} style={{ display: "flex", alignItems: "center", gap: ".85rem", width: "100%", textAlign: "start", background: "#fffdf8", border: "1.5px solid #e7dccd", borderRadius: 18, padding: ".7rem", cursor: "pointer", marginBottom: ".85rem" }}>
                 <span style={{ position: "relative", width: 58, height: 58, borderRadius: 13, overflow: "hidden", flexShrink: 0 }}>
                   {images["cover"] && images["cover"] !== "loading" && images["cover"] !== "error"
                     ? <Image src={images["cover"] as string} alt="" fill style={{ objectFit: "cover" }} unoptimized={/^data:/.test(images["cover"] as string)} />
                     : <div style={{ position: "absolute", inset: 0, background: SCENES[0].bg }} />
                   }
                 </span>
-                <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: ".12rem", minWidth: 0, textAlign: "right" }}>
+                <span style={{ flex: 1, display: "flex", flexDirection: "column", gap: ".12rem", minWidth: 0, textAlign: "start" }}>
                   <span style={{ fontSize: ".72rem", fontWeight: 700, color: "#9a7fb0" }}>{T.todayStory}</span>
                   <span style={{ fontFamily: "'Rubik', sans-serif", fontSize: "1.02rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>
                     {savedGuestTitle || story.title}
@@ -1353,7 +1357,7 @@ export function LibraryView({ library, libQuery, libSort, libFavOnly, favorites,
                 </button>
                 <button
                   onClick={() => onOpen(s)}
-                  style={{ flex: 1, textAlign: "right", background: "none", border: "none", cursor: "pointer", padding: 0, minWidth: 0 }}
+                  style={{ flex: 1, textAlign: "start", background: "none", border: "none", cursor: "pointer", padding: 0, minWidth: 0 }}
                 >
                   <span style={{ display: "block", fontFamily: "'Rubik', sans-serif", fontSize: "1.05rem", fontWeight: 700, color: "#3a2a5c", whiteSpace: "nowrap", overflow: "hidden", textOverflow: "ellipsis" }}>{s.title}</span>
                   <span style={{ display: "block", fontSize: ".8rem", color: "#9a7fb0", fontWeight: 600, marginTop: ".18rem" }}>{T.storyMeta(pageCount, s.age_group)}</span>
@@ -1529,14 +1533,14 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
             {role === "admin" && (
               <button
                 onClick={() => { setMenuOpen(false); router.push("/admin"); }}
-                style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", borderBottom: "1px solid #e7dccd", color: "#553089", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 700, cursor: "pointer", textAlign: "right", direction: "inherit" }}
+                style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", borderBottom: "1px solid #e7dccd", color: "#553089", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 700, cursor: "pointer", textAlign: "start", direction: "inherit" }}
               >
                 ⚙ Admin console
               </button>
             )}
             <button
               onClick={() => { setMenuOpen(false); onSignOut(); }}
-              style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", color: "#6b5a82", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", textAlign: "right", direction: "inherit" }}
+              style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", color: "#6b5a82", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", textAlign: "start", direction: "inherit" }}
             >
               {T.signOut}
             </button>

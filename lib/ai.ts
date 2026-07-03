@@ -127,7 +127,8 @@ export async function completeChat({
 
 function buildSystemPrompt(
   inspirationalStories: Story[],
-  ageGroup: string
+  ageGroup: string,
+  locale: string
 ): string {
   const storiesContext = inspirationalStories
     .map((s, i) => `Story ${i + 1}: "${s.title}"\n${s.content.slice(0, 400)}...`)
@@ -192,14 +193,64 @@ function buildSystemPrompt(
 
   const STYLE_SUFFIX = "watercolor children's book illustration, soft colored pencil linework, warm whimsical lighting, pastel color palette with warm greens and blues, professional picture book art style, NO text, NO letters, NO words, NO signs anywhere in the image";
 
-  return `You are an expert Hebrew children's story writer AND art director for a picture book.
+  const isEnglish = locale === "en";
+
+  const storyLanguageBlock = isEnglish
+    ? `ALL STORY TEXT MUST BE IN ENGLISH (left-to-right).`
+    : `ALL STORY TEXT MUST BE IN HEBREW (right-to-left, no vowel marks / nikud).`;
+
+  const rhymeGuidance = isEnglish
+    ? `   - True rhyme = final vowel + consonant sounds IDENTICAL aloud. Example: night / flight ✓ | night / fine ✗
+   - No weak rhymes: near-rhymes or same suffix are not enough.`
+    : `   - True rhyme = final syllable sounds IDENTICAL aloud. Example: sameach / poreach ✓ | sameach / gadol ✗
+   - No weak rhymes: same word or only an inflection change is NOT a rhyme.`;
+
+  const extraStoryRule = isEnglish ? "" : "\n7. Write WITHOUT nikud — plain Hebrew only.";
+
+  const jsonExample = isEnglish
+    ? `{
+  "title": "The Story Title in English",
+  "pages": {
+    "1": "Page 1 content in English — up to ${maxWordsPerPage} words",
+    "2": "Page 2 content in English — up to ${maxWordsPerPage} words",
+    "${pageRange.split("-")[1]}": "Last page content — up to ${maxWordsPerPage} words"
+  },
+  "rhymeScheme": "AABB",
+  "themes": ["friendship", "adventure"],
+  "illustrated_story": {
+    "cover": "Main characters together in a warm setting, cheerful expressions, inviting mood. ${STYLE_SUFFIX}",
+    "1": "Scene description for page 1 with consistent character appearances. ${STYLE_SUFFIX}",
+    "2": "Scene description for page 2. ${STYLE_SUFFIX}",
+    "${pageRange.split("-")[1]}": "Scene description for the last page. ${STYLE_SUFFIX}"
+  }
+}`
+    : `{
+  "title": "שם הסיפור בעברית",
+  "pages": {
+    "1": "תוכן עמוד 1 בעברית — עד ${maxWordsPerPage} מילים",
+    "2": "תוכן עמוד 2 בעברית — עד ${maxWordsPerPage} מילים",
+    "${pageRange.split("-")[1]}": "תוכן העמוד האחרון — עד ${maxWordsPerPage} מילים"
+  },
+  "rhymeScheme": "AABB",
+  "themes": ["חברות", "הרפתקה"],
+  "illustrated_story": {
+    "cover": "Main characters together in a warm setting, cheerful expressions, inviting mood. ${STYLE_SUFFIX}",
+    "1": "Scene description for page 1 with consistent character appearances. ${STYLE_SUFFIX}",
+    "2": "Scene description for page 2. ${STYLE_SUFFIX}",
+    "${pageRange.split("-")[1]}": "Scene description for the last page. ${STYLE_SUFFIX}"
+  }
+}`;
+
+  const storyLang = isEnglish ? "English" : "Hebrew";
+
+  return `You are an expert ${storyLang} children's story writer AND art director for a picture book.
 Your task is TWO things in ONE response:
-  A) Write a fun, rhyming Hebrew story divided into short pages.
+  A) Write a fun, rhyming ${storyLang} story divided into short pages.
   B) Write ONE English illustration prompt per page (plus a cover prompt).
 
 ═══ PART A: STORY ═══
 
-ALL STORY TEXT MUST BE IN HEBREW (right-to-left, no vowel marks / nikud).
+${storyLanguageBlock}
 
 Write for children aged ${ageGroup}.
 
@@ -215,13 +266,11 @@ Story requirements:
 2. RHYMING — most critical. Choose one scheme (AABB or ABAB) and apply consistently on every page:
    - AABB: line 1 rhymes with line 2, line 3 rhymes with line 4
    - ABAB: line 1 rhymes with line 3, line 2 rhymes with line 4
-   - True rhyme = final syllable sounds IDENTICAL aloud. Example: sameach / poreach ✓ | sameach / gadol ✗
-   - No weak rhymes: same word or only an inflection change is NOT a rhyme.
+${rhymeGuidance}
 3. EXACTLY ${pageRange} pages — no more, no less.
 4. Each page: maximum ${maxWordsPerPage} words.
 5. End with a simple positive lesson.
-6. Draw themes from the inspirational stories below.
-7. Write WITHOUT nikud — plain Hebrew only.
+6. Draw themes from the inspirational stories below.${extraStoryRule}
 
 Inspirational stories:
 ${storiesContext}
@@ -244,22 +293,7 @@ Illustration rules:
 ═══ JSON OUTPUT ═══
 
 Return ONLY valid JSON — no extra text. Example structure:
-{
-  "title": "שם הסיפור בעברית",
-  "pages": {
-    "1": "תוכן עמוד 1 בעברית — עד ${maxWordsPerPage} מילים",
-    "2": "תוכן עמוד 2 בעברית — עד ${maxWordsPerPage} מילים",
-    "${pageRange.split("-")[1]}": "תוכן העמוד האחרון — עד ${maxWordsPerPage} מילים"
-  },
-  "rhymeScheme": "AABB",
-  "themes": ["חברות", "הרפתקה"],
-  "illustrated_story": {
-    "cover": "Main characters together in a warm setting, cheerful expressions, inviting mood. ${STYLE_SUFFIX}",
-    "1": "Scene description for page 1 with consistent character appearances. ${STYLE_SUFFIX}",
-    "2": "Scene description for page 2. ${STYLE_SUFFIX}",
-    "${pageRange.split("-")[1]}": "Scene description for the last page. ${STYLE_SUFFIX}"
-  }
-}`;
+${jsonExample}`;
 }
 
 export interface GenerateStoryOptions {
@@ -267,6 +301,7 @@ export interface GenerateStoryOptions {
   inspirationalStories: Story[];
   ageGroup?: string;
   maxTokens?: number;
+  locale?: string;
 }
 
 export interface GeneratedStory {
@@ -280,9 +315,9 @@ export interface GeneratedStory {
 export async function generateStory(
   options: GenerateStoryOptions
 ): Promise<GeneratedStory> {
-  const { prompt, inspirationalStories, ageGroup = "4-6", maxTokens = 15000 } = options;
+  const { prompt, inspirationalStories, ageGroup = "4-6", maxTokens = 15000, locale = "he" } = options;
 
-  const systemPrompt = buildSystemPrompt(inspirationalStories, ageGroup);
+  const systemPrompt = buildSystemPrompt(inspirationalStories, ageGroup, locale);
 
   const TIMEOUT_MS = getAiRequestTimeoutMs();
   const controller = new AbortController();
