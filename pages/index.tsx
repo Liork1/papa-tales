@@ -181,6 +181,10 @@ const Home: NextPage = () => {
   useEffect(() => { phaseRef.current = phase; }, [phase]);
   useEffect(() => { currentPageRef.current = currentPage; }, [currentPage]);
   useEffect(() => { imagesRef.current = images; }, [images]);
+  // _document.tsx only runs on the server; keep the HTML dir attribute in sync for client-side locale switches
+  useEffect(() => {
+    document.documentElement.dir = locale === "en" ? "ltr" : "rtl";
+  }, [locale]);
 
   const isDesktop = cw >= 1024;
   const isTablet = cw >= 600 && cw < 1024;
@@ -698,7 +702,7 @@ const Home: NextPage = () => {
         />
       </Head>
 
-      <div ref={rootRef} className={styles.wrapper}>
+      <div ref={rootRef} className={styles.wrapper} dir={locale === "en" ? "ltr" : "rtl"}>
 
         {/* ── Daily limit (guest, 1/day) ── */}
         {phase === "limit" && (
