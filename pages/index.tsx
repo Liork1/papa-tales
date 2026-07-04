@@ -1456,30 +1456,36 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
           </>
         )}
         <div style={{ position: "relative" }}>
-        <button
-          onClick={() => setMenuOpen((o) => !o)}
-          style={{ width: 34, height: 34, borderRadius: "50%", border: "1.5px solid #e7dccd", background: "#fffdf8", color: "#7a5fa0", fontSize: "1.1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}
-        >
-          ⋯
-        </button>
-        {menuOpen && (
-          <div style={{ position: "absolute", top: 40, left: 0, background: "#fff8ef", border: "1.5px solid #e7dccd", borderRadius: 12, boxShadow: "0 8px 24px rgba(10,5,30,.18)", minWidth: 148, zIndex: 100, overflow: "hidden" }}>
-            {role === "admin" && (
-              <button
-                onClick={() => { setMenuOpen(false); router.push("/admin"); }}
-                style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", borderBottom: "1px solid #e7dccd", color: "#553089", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 700, cursor: "pointer", textAlign: "start", direction: "inherit" }}
-              >
-                ⚙ Admin console
-              </button>
-            )}
-            <button
-              onClick={() => { setMenuOpen(false); onSignOut(); }}
-              style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", color: "#6b5a82", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", textAlign: "start", direction: "inherit" }}
-            >
-              {T.signOut}
-            </button>
-          </div>
-        )}
+          <button
+            onClick={() => setMenuOpen((o) => !o)}
+            style={{ width: 34, height: 34, borderRadius: "50%", border: "1.5px solid #e7dccd", background: "#fffdf8", color: "#7a5fa0", fontSize: "1.1rem", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1 }}
+          >
+            ⋯
+          </button>
+          {menuOpen && (
+            <>
+              {/* Backdrop — closes menu on outside tap, mirrors LangSwitcher pattern */}
+              <div onClick={() => setMenuOpen(false)} style={{ position: "fixed", inset: 0, zIndex: 98 }} />
+              {/* insetInlineEnd: 0 anchors the trailing edge of the dropdown to the trailing edge of the button,
+                  keeping it on-screen in both LTR (English) and RTL (Hebrew) layouts */}
+              <div style={{ position: "absolute", top: 40, insetInlineEnd: 0, background: "#fff8ef", border: "1.5px solid #e7dccd", borderRadius: 12, boxShadow: "0 8px 24px rgba(10,5,30,.18)", minWidth: 148, zIndex: 99 }}>
+                {role === "admin" && (
+                  <button
+                    onClick={() => { setMenuOpen(false); router.push("/admin"); }}
+                    style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", borderBottom: "1px solid #e7dccd", color: "#553089", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 700, cursor: "pointer", textAlign: "start", direction: "inherit" }}
+                  >
+                    ⚙ Admin console
+                  </button>
+                )}
+                <button
+                  onClick={() => { setMenuOpen(false); onSignOut(); }}
+                  style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", color: "#6b5a82", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 600, cursor: "pointer", textAlign: "start", direction: "inherit" }}
+                >
+                  {T.signOut}
+                </button>
+              </div>
+            </>
+          )}
         </div>
       </div>
     </div>
