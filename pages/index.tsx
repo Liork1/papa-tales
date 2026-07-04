@@ -200,6 +200,13 @@ const Home: NextPage = () => {
     document.documentElement.dir = locale === "en" ? "ltr" : "rtl";
   }, [locale]);
 
+  // Prefetch page chunks so navigation is instant even without a JS cache (e.g. incognito mode).
+  // Without this, tapping a nav button on slow mobile triggers a chunk fetch that blocks touch events.
+  useEffect(() => {
+    router.prefetch("/auth");
+    router.prefetch("/admin");
+  }, [router]);
+
   // Swap demo story language when locale changes mid-demo
   useEffect(() => {
     if (!demoMode) return;
@@ -245,10 +252,12 @@ const Home: NextPage = () => {
       else if (e.key === "ArrowRight") go(-1);
     };
     const onTS = (e: TouchEvent) => {
+      if (!e.touches.length) return;
       touchStartRef.current = e.touches[0].clientX;
     };
     const onTE = (e: TouchEvent) => {
       if (phaseRef.current !== "reading" || touchStartRef.current == null) return;
+      if (!e.changedTouches.length) return;
       const dx = e.changedTouches[0].clientX - touchStartRef.current;
       if (Math.abs(dx) > 50) go(dx < 0 ? 1 : -1);
       touchStartRef.current = null;
