@@ -5,7 +5,10 @@ const VALID_LOCALES = new Set(["he", "en"]);
 const SKIP_PREFIXES = [
   "/api/",
   "/_next/",
-  "/auth/callback", // OAuth callback — must reach the page exactly as the provider redirected; locale redirect breaks PKCE code exchange
+  "/auth",      // covers /auth, /auth?mode=*, /auth/callback — navTo() already sets the right locale prefix
+  "/en/auth",   // English locale version of all auth paths
+  "/admin",     // no locale redirect on admin pages
+  "/en/admin",
   "/favicon",
   "/sitemap",
   "/robots",
