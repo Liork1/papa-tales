@@ -109,7 +109,7 @@ function TrendChart({ data }: { data: TrendPoint[] }) {
 // ── Main component ─────────────────────────────────────────────────────────────
 const AdminPage: NextPage = () => {
   const router = useRouter();
-  const { user, role } = useUserContext();
+  const { user, role, ready } = useUserContext();
   const [view, setView] = useState<View>("overview");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [stats, setStats] = useState<Stats | null>(null);
@@ -200,6 +200,12 @@ const AdminPage: NextPage = () => {
 
   const navTo = (v: View) => { setView(v); setSidebarOpen(false); };
 
+  if (!ready) return (
+    <div style={{ minHeight: "100vh", display: "flex", alignItems: "center", justifyContent: "center", background: "#f4f2f9" }}>
+      <div style={{ width: 36, height: 36, borderRadius: "50%", border: "3px solid #e7dcf5", borderTopColor: "#7a4fb0", animation: "spin 0.7s linear infinite" }} />
+      <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+    </div>
+  );
   if (!user || role !== "admin") return null;
 
   return (
