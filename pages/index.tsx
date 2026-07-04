@@ -141,6 +141,11 @@ const Home: NextPage = () => {
   const router = useRouter();
   const T = useLocale();
   const locale = router.locale ?? "he";
+  // Full-page nav: bypasses the Next.js client-side router so the i18n middleware resolves
+  // locale once per request instead of entering the /_next/data/ 307 redirect loop.
+  const navTo = (path: string) => {
+    window.location.href = `${locale === "en" ? "/en" : ""}${path}`;
+  };
 
   const STAGES = T.stages;
 
@@ -200,12 +205,6 @@ const Home: NextPage = () => {
     document.documentElement.dir = locale === "en" ? "ltr" : "rtl";
   }, [locale]);
 
-  // Prefetch page chunks so navigation is instant even without a JS cache (e.g. incognito mode).
-  // Without this, tapping a nav button on slow mobile triggers a chunk fetch that blocks touch events.
-  useEffect(() => {
-    router.prefetch("/auth");
-    router.prefetch("/admin");
-  }, [router]);
 
   // Swap demo story language when locale changes mid-demo
   useEffect(() => {
@@ -773,8 +772,8 @@ const Home: NextPage = () => {
               </span>
               <span style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
                 <LangSwitcher variant="light" />
-                <button onClick={() => router.push("/auth?mode=signin")} style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}>{T.signIn}</button>
-                <button onClick={() => router.push("/auth?mode=register")} style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}>{T.register}</button>
+                <button onClick={() => navTo("/auth?mode=signin")} style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}>{T.signIn}</button>
+                <button onClick={() => navTo("/auth?mode=register")} style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}>{T.register}</button>
               </span>
             </div>
 
@@ -857,7 +856,7 @@ const Home: NextPage = () => {
             <p style={{ textAlign: "center", fontSize: ".82rem", color: "#9a7fb0", margin: "1.05rem 0 0", lineHeight: 1.55 }}>
               {T.dontPay}{" "}
               <button
-                onClick={() => router.push("/auth?mode=register")}
+                onClick={() => navTo("/auth?mode=register")}
                 style={{ background: "none", border: "none", color: "#5b37b7", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 700, cursor: "pointer", padding: 0 }}
               >
                 {T.registerFree}
@@ -1367,6 +1366,8 @@ interface FormHeaderProps {
 function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUpgrade, onOpenBuy, onOpenLibrary }: FormHeaderProps) {
   const router = useRouter();
   const T = useLocale();
+  const locale = router.locale ?? "he";
+  const navTo = (path: string) => { window.location.href = `${locale === "en" ? "/en" : ""}${path}`; };
   const [menuOpen, setMenuOpen] = useState(false);
 
   const headerStyle: React.CSSProperties = {
@@ -1387,13 +1388,13 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
         <span style={{ display: "flex", alignItems: "center", gap: ".4rem" }}>
           <LangSwitcher variant="light" />
           <button
-            onClick={() => router.push("/auth?mode=signin")}
+            onClick={() => navTo("/auth?mode=signin")}
             style={{ background: "none", border: "none", color: "#7a5fa0", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 600, cursor: "pointer", padding: ".35rem .4rem" }}
           >
             {T.signIn}
           </button>
           <button
-            onClick={() => router.push("/auth?mode=register")}
+            onClick={() => navTo("/auth?mode=register")}
             style={{ background: "#7a4fb0", border: "none", color: "#fff", fontFamily: "'Rubik', sans-serif", fontSize: ".86rem", fontWeight: 700, cursor: "pointer", padding: ".4rem 1rem", borderRadius: 99 }}
           >
             {T.register}
@@ -1480,7 +1481,7 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
               <div style={{ position: "absolute", top: 40, insetInlineEnd: 0, background: "#fff8ef", border: "1.5px solid #e7dccd", borderRadius: 12, boxShadow: "0 8px 24px rgba(10,5,30,.18)", minWidth: 148, zIndex: 99 }}>
                 {role === "admin" && (
                   <button
-                    onClick={() => { setMenuOpen(false); router.push("/admin"); }}
+                    onClick={() => { setMenuOpen(false); navTo("/admin"); }}
                     style={{ width: "100%", padding: ".65rem 1rem", background: "none", border: "none", borderBottom: "1px solid #e7dccd", color: "#553089", fontFamily: "'Assistant', sans-serif", fontSize: ".9rem", fontWeight: 700, cursor: "pointer", textAlign: "start", direction: "inherit" }}
                   >
                     ⚙ Admin console
