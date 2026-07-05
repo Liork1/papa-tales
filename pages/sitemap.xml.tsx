@@ -1,6 +1,6 @@
 import type { GetServerSideProps } from "next";
 
-const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.vercel.app";
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.com";
 
 // Each entry defines a page with its Hebrew (default) and English paths.
 // hreflang alternates are emitted for every URL so Google understands the
