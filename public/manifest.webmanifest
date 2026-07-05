@@ -2,6 +2,7 @@
   "name": "אבא סיפור",
   "short_name": "אבא סיפור",
   "description": "סיפורי ילדים מחורזים ומאויירים בעברית — תוך רגע",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",
