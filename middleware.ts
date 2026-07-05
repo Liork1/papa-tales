@@ -15,6 +15,7 @@ const SKIP_PREFIXES = [
   "/og-image",
   "/apple-touch-icon",
   "/demo/",
+  "/.well-known",
 ];
 
 function deriveUrlLocale(pathname: string): "he" | "en" {
@@ -65,5 +66,5 @@ export function middleware(req: NextRequest): NextResponse | undefined {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|_next/data|favicon.ico).*)"],
+  matcher: ["/((?!_next/static|_next/image|_next/data|favicon.ico|.well-known).*)"],
 };

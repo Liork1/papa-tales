@@ -37,3 +37,7 @@ next-env.d.ts
 # supabase
 /supabase/.branches
 /supabase/.temp
+
+# next-pwa generated service worker (rebuilt on every Vercel deploy)
+public/sw.js
+public/workbox-*.js

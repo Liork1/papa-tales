@@ -133,6 +133,22 @@ async function main() {
     .png({ compressionLevel: 9 })
     .toFile(`${PUBLIC}/apple-touch-icon.png`);
   console.log("✓  public/apple-touch-icon.png  (180×180)");
+
+  const fs = require("fs");
+  const iconsDir = `${PUBLIC}/icons`;
+  if (!fs.existsSync(iconsDir)) fs.mkdirSync(iconsDir, { recursive: true });
+
+  await sharp(Buffer.from(ICON_SVG))
+    .resize(192, 192)
+    .png({ compressionLevel: 9 })
+    .toFile(`${iconsDir}/icon-192.png`);
+  console.log("✓  public/icons/icon-192.png  (192×192)");
+
+  await sharp(Buffer.from(ICON_SVG))
+    .resize(512, 512)
+    .png({ compressionLevel: 9 })
+    .toFile(`${iconsDir}/icon-512.png`);
+  console.log("✓  public/icons/icon-512.png  (512×512)");
 }
 
 main().catch((e) => { console.error(e); process.exit(1); });
