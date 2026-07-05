@@ -171,6 +171,7 @@ async function main() {
   console.log("✓  public/apple-touch-icon.png  (180×180)");
 
   const fs = require("fs");
+
   const iconsDir = `${PUBLIC}/icons`;
   if (!fs.existsSync(iconsDir)) fs.mkdirSync(iconsDir, { recursive: true });
 
