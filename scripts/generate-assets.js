@@ -172,66 +172,6 @@ async function main() {
 
   const fs = require("fs");
 
-  const screenshotsDir = `${PUBLIC}/screenshots`;
-  if (!fs.existsSync(screenshotsDir)) fs.mkdirSync(screenshotsDir, { recursive: true });
-
-  const MOBILE_SCREENSHOT_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="430" height="932">
-  <defs>
-    <linearGradient id="sbg" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
-      <stop offset="0%"   stop-color="#3a2d6e"/>
-      <stop offset="60%"  stop-color="#241a52"/>
-      <stop offset="100%" stop-color="#160f33"/>
-    </linearGradient>
-    <linearGradient id="sgold" x1="0" y1="0" x2="1" y2="0">
-      <stop offset="0%"   stop-color="#f3d27a"/>
-      <stop offset="100%" stop-color="#dca83f"/>
-    </linearGradient>
-    <mask id="sc">
-      <rect width="430" height="932" fill="white"/>
-      <circle cx="278" cy="240" r="100" fill="black"/>
-    </mask>
-  </defs>
-
-  <rect width="430" height="932" fill="url(#sbg)"/>
-
-  <!-- Stars -->
-  <circle cx="48"  cy="80"  r="2.5" fill="white" opacity="0.6"/>
-  <circle cx="380" cy="100" r="2"   fill="white" opacity="0.5"/>
-  <circle cx="395" cy="820" r="2.5" fill="white" opacity="0.4"/>
-  <circle cx="35"  cy="800" r="2"   fill="white" opacity="0.5"/>
-  <circle cx="390" cy="440" r="2"   fill="white" opacity="0.35"/>
-  <circle cx="50"  cy="500" r="2"   fill="white" opacity="0.4"/>
-  <circle cx="370" cy="180" r="2"   fill="white" opacity="0.45"/>
-
-  <!-- Moon centered horizontally, upper third -->
-  <circle cx="186" cy="260" r="110" fill="url(#sgold)" mask="url(#sc)"/>
-
-  <!-- App name -->
-  <text x="215" y="440" font-family="Arial,Helvetica,sans-serif" font-size="52" font-weight="bold"
-        text-anchor="middle" fill="#fdf3df">&#x05D0;&#x05D1;&#x05D0; &#x05E1;&#x05D9;&#x05E4;&#x05D5;&#x05E8;</text>
-
-  <!-- Tagline -->
-  <text x="215" y="498" font-family="Arial,Helvetica,sans-serif" font-size="22"
-        text-anchor="middle" fill="rgba(253,243,223,0.6)">&#x05E1;&#x05D9;&#x05E4;&#x05D5;&#x05E8;&#x05D9; &#x05D9;&#x05DC;&#x05D3;&#x05D9;&#x05DD; &#x05DE;&#x05D7;&#x05D5;&#x05E8;&#x05D6;&#x05D9;&#x05DD; &#x05D1;&#x05E2;&#x05D1;&#x05E8;&#x05D9;&#x05EA;</text>
-
-  <!-- Divider -->
-  <rect x="155" y="528" width="120" height="2" rx="1" fill="#dca83f" opacity="0.4"/>
-
-  <!-- Simulated card -->
-  <rect x="32" y="560" width="366" height="280" rx="20" fill="rgba(255,255,255,0.06)" stroke="rgba(255,255,255,0.1)" stroke-width="1"/>
-  <rect x="60" y="590" width="180" height="14" rx="7" fill="rgba(253,243,223,0.25)"/>
-  <rect x="60" y="616" width="280" height="10" rx="5" fill="rgba(253,243,223,0.12)"/>
-  <rect x="60" y="636" width="240" height="10" rx="5" fill="rgba(253,243,223,0.12)"/>
-  <rect x="60" y="656" width="260" height="10" rx="5" fill="rgba(253,243,223,0.12)"/>
-  <rect x="60" y="700" width="120" height="36" rx="18" fill="#7c5cbf" opacity="0.8"/>
-  <rect x="200" y="700" width="120" height="36" rx="18" fill="rgba(255,255,255,0.08)"/>
-</svg>`;
-
-  await sharp(Buffer.from(MOBILE_SCREENSHOT_SVG))
-    .png({ compressionLevel: 9 })
-    .toFile(`${screenshotsDir}/mobile.png`);
-  console.log("✓  public/screenshots/mobile.png  (430×932)");
-
   const iconsDir = `${PUBLIC}/icons`;
   if (!fs.existsSync(iconsDir)) fs.mkdirSync(iconsDir, { recursive: true });
 

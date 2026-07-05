@@ -40,11 +40,18 @@
       "label": "אבא סיפור — מחולל סיפורי ילדים"
     },
     {
-      "src": "/screenshots/mobile.png",
-      "sizes": "430x932",
+      "src": "/screenshots/mobile-story.png",
+      "sizes": "768x1652",
       "type": "image/png",
       "form_factor": "narrow",
-      "label": "אבא סיפור במסך נייד"
+      "label": "אבא סיפור — קריאת סיפור"
+    },
+    {
+      "src": "/screenshots/mobile-home.png",
+      "sizes": "768x1652",
+      "type": "image/png",
+      "form_factor": "narrow",
+      "label": "אבא סיפור — מסך הבית"
     }
   ]
 }
