@@ -28,6 +28,12 @@ export default class MyDocument extends Document<Props> {
           <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
           <link rel="shortcut icon" href="/favicon.svg" />
           <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+          <link rel="manifest" href="/manifest.webmanifest" />
+          <meta name="theme-color" content="#241a52" />
+          <meta name="mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-capable" content="yes" />
+          <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+          <meta name="apple-mobile-web-app-title" content="אבא סיפור" />
         </Head>
         <body>
           <Main />

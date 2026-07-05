@@ -130,3 +130,36 @@ supabase/
   migrations/
     20240101000000_create_stories_table.sql
 ```
+
+## Publishing & Deployment
+
+### Web (Vercel)
+Every merge to `main` automatically deploys to Vercel. No extra steps needed.
+
+### Google Play Store (Android)
+
+Papa Tales is published to Google Play as a **Trusted Web Activity (TWA)**: a thin Android shell that renders `papa-tales.vercel.app` in full-screen Chrome. This means **most updates require no Play Store action at all**.
+
+#### When Vercel deployment is enough (most changes)
+UI changes, new features, bug fixes, content updates — just merge your PR. Android users get the new version automatically on next app open.
+
+#### When you need a new Play Store release
+Only required if you change the Android shell itself:
+- Production domain changes (e.g. moving to a custom domain)
+- `scope` or `start_url` changed in `public/manifest.webmanifest`
+- Package name changed (`com.papatales.app`)
+- New Android permissions needed
+
+**To cut a new release:**
+1. Go to [pwabuilder.com](https://pwabuilder.com), enter the production URL
+2. Click Build My PWA → Android, bump the version number
+3. Download the new `.aab` and the keystore `.jks` (keep the same keystore — losing it means you can't update the app)
+4. Upload the new AAB in Play Console → Production → Create new release
+5. If the domain changed: update `public/.well-known/assetlinks.json` with the new SHA-256 fingerprint from Play Console → App signing, deploy, and verify
+
+#### Digital Asset Links
+The file `public/.well-known/assetlinks.json` links the domain to the Android app. It must stay deployed and accessible at:
+```
+https://papa-tales.vercel.app/.well-known/assetlinks.json
+```
+Do not delete or move this file — it keeps the app in full-screen mode (without the Chrome address bar).
