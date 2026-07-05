@@ -18,6 +18,9 @@ const SKIP_PREFIXES = [
   "/.well-known",
   "/sw.js",
   "/workbox-",
+  "/manifest",      // covers /manifest.webmanifest and /manifest.xml
+  "/icons/",
+  "/screenshots/",
 ];
 
 function deriveUrlLocale(pathname: string): "he" | "en" {
@@ -68,5 +71,5 @@ export function middleware(req: NextRequest): NextResponse | undefined {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|_next/data|favicon.ico|.well-known|sw.js|workbox-).*)"],
+  matcher: ["/((?!_next/static|_next/image|_next/data|favicon.ico|.well-known|sw.js|workbox-|manifest|icons/|screenshots/).*)"],
 };
