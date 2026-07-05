@@ -120,6 +120,42 @@ const ICON_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="180" height="18
         fill="rgba(253,243,223,0.75)">&#x05D0;&#x05D1;&#x05D0; &#x05E1;&#x05D9;&#x05E4;&#x05D5;&#x05E8;</text>
 </svg>`;
 
+/* ── PWA Icons 192×192 / 512×512 ─────────────────────────────────────── */
+/* Full opaque background (no rounded-rect clipping — OS applies the mask shape).
+   Moon centered vertically; no text (launcher shows the app name separately). */
+const ICON_PWA_SVG = `<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
+  <defs>
+    <linearGradient id="pbg" x1="0" y1="0" x2="1" y2="1" gradientUnits="objectBoundingBox">
+      <stop offset="0%"   stop-color="#3a2d6e"/>
+      <stop offset="100%" stop-color="#160f33"/>
+    </linearGradient>
+    <linearGradient id="pgold" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0%"   stop-color="#f3d27a"/>
+      <stop offset="100%" stop-color="#dca83f"/>
+    </linearGradient>
+    <mask id="pc">
+      <rect width="512" height="512" fill="white"/>
+      <circle cx="362" cy="208" r="158" fill="black"/>
+    </mask>
+  </defs>
+
+  <!-- Full opaque background -->
+  <rect width="512" height="512" fill="url(#pbg)"/>
+
+  <!-- Stars scattered in corners / negative space -->
+  <circle cx="62"  cy="58"  r="4"   fill="white" opacity="0.6"/>
+  <circle cx="448" cy="72"  r="3"   fill="white" opacity="0.5"/>
+  <circle cx="462" cy="432" r="4"   fill="white" opacity="0.4"/>
+  <circle cx="48"  cy="452" r="3"   fill="white" opacity="0.5"/>
+  <circle cx="460" cy="310" r="3"   fill="white" opacity="0.35"/>
+  <circle cx="72"  cy="420" r="3.5" fill="white" opacity="0.4"/>
+  <circle cx="460" cy="180" r="3"   fill="white" opacity="0.45"/>
+  <circle cx="100" cy="68"  r="2.5" fill="white" opacity="0.4"/>
+
+  <!-- Crescent moon — visually centered (bounding box: x≈97–415, y≈81–431) -->
+  <circle cx="272" cy="256" r="175" fill="url(#pgold)" mask="url(#pc)"/>
+</svg>`;
+
 async function main() {
   console.log("Generating public assets…");
 
@@ -138,13 +174,13 @@ async function main() {
   const iconsDir = `${PUBLIC}/icons`;
   if (!fs.existsSync(iconsDir)) fs.mkdirSync(iconsDir, { recursive: true });
 
-  await sharp(Buffer.from(ICON_SVG))
+  await sharp(Buffer.from(ICON_PWA_SVG))
     .resize(192, 192)
     .png({ compressionLevel: 9 })
     .toFile(`${iconsDir}/icon-192.png`);
   console.log("✓  public/icons/icon-192.png  (192×192)");
 
-  await sharp(Buffer.from(ICON_SVG))
+  await sharp(Buffer.from(ICON_PWA_SVG))
     .resize(512, 512)
     .png({ compressionLevel: 9 })
     .toFile(`${iconsDir}/icon-512.png`);
