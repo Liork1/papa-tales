@@ -1,10 +1,7 @@
-import type { GetServerSideProps } from "next";
+import type { NextApiRequest, NextApiResponse } from "next";
 
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.com";
 
-// Each entry defines a page with its Hebrew (default) and English paths.
-// hreflang alternates are emitted for every URL so Google understands the
-// language relationship between the two locale variants.
 const PAGES = [
   { he: "/",     en: "/en",      priority: "1.0", changefreq: "weekly"  },
   { he: "/auth", en: "/en/auth", priority: "0.5", changefreq: "monthly" },
@@ -14,7 +11,6 @@ function generateSitemap(): string {
   const now = new Date().toISOString().split("T")[0];
 
   const entries = PAGES.flatMap(({ he, en, priority, changefreq }) => [
-    // Hebrew (default locale) URL
     `  <url>
     <loc>${SITE_URL}${he}</loc>
     <lastmod>${now}</lastmod>
@@ -24,7 +20,6 @@ function generateSitemap(): string {
     <xhtml:link rel="alternate" hreflang="he"        href="${SITE_URL}${he}"/>
     <xhtml:link rel="alternate" hreflang="en"        href="${SITE_URL}${en}"/>
   </url>`,
-    // English URL
     `  <url>
     <loc>${SITE_URL}${en}</loc>
     <lastmod>${now}</lastmod>
@@ -43,14 +38,8 @@ ${entries.join("\n")}
 </urlset>`;
 }
 
-export const getServerSideProps: GetServerSideProps = async ({ res }) => {
-  res.setHeader("Content-Type", "text/xml");
+export default function handler(_req: NextApiRequest, res: NextApiResponse) {
+  res.setHeader("Content-Type", "text/xml; charset=utf-8");
   res.setHeader("Cache-Control", "public, s-maxage=86400, stale-while-revalidate");
-  res.write(generateSitemap());
-  res.end();
-  return { props: {} };
-};
-
-export default function Sitemap() {
-  return null;
+  res.send(generateSitemap());
 }
