@@ -545,6 +545,7 @@ const Home: NextPage = () => {
   const handleReset = () => {
     stopSpeech();
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
+    setPrompt("");
     setPhase(!user && guestUsedToday() ? "limit" : "form");
     setCurrentPage(0);
     setDemoMode(false);
