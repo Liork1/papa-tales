@@ -1,0 +1,8 @@
+[{
+      "relation": ["delegate_permission/common.handle_all_urls"],
+      "target": {
+        "namespace": "android_app",
+        "package_name": "com.papa_tales.twa",
+        "sha256_cert_fingerprints": ["28:D6:27:52:BD:9E:31:CC:B7:7C:E6:04:71:5E:25:87:C5:40:FE:65:26:F5:72:2B:6E:7A:12:21:16:C5:2E:C4"]
+      }
+    }]
