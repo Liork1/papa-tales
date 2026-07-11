@@ -3,8 +3,10 @@ import type { NextApiRequest, NextApiResponse } from "next";
 const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://papa-tales.com";
 
 const PAGES = [
-  { he: "/",     en: "/en",      priority: "1.0", changefreq: "weekly"  },
-  { he: "/auth", en: "/en/auth", priority: "0.5", changefreq: "monthly" },
+  { he: "/",        en: "/en",         priority: "1.0", changefreq: "weekly"  },
+  { he: "/auth",    en: "/en/auth",    priority: "0.5", changefreq: "monthly" },
+  { he: "/privacy", en: "/en/privacy", priority: "0.3", changefreq: "yearly"  },
+  { he: "/terms",   en: "/en/terms",   priority: "0.3", changefreq: "yearly"  },
 ];
 
 function generateSitemap(): string {
