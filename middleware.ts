@@ -23,7 +23,16 @@ const SKIP_PREFIXES = [
   "/screenshots/",
 ];
 
-function deriveUrlLocale(pathname: string): "he" | "en" {
+// When Next's i18n routing resolves a locale for the request, req.nextUrl.pathname
+// has the locale prefix already stripped (e.g. "/en/privacy" -> pathname "/privacy",
+// nextUrl.locale "en") — so the locale must be read from nextUrl.locale, not
+// re-derived from the prefix. In test environments (bare NextRequest, no Next
+// server context) nextUrl.locale is unresolved and pathname keeps its prefix,
+// so fall back to the prefix check there.
+function deriveUrlLocale(req: NextRequest): "he" | "en" {
+  const resolved = req.nextUrl.locale;
+  if (resolved === "en" || resolved === "he") return resolved;
+  const { pathname } = req.nextUrl;
   return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "he";
 }
 
@@ -48,7 +57,7 @@ export function middleware(req: NextRequest): NextResponse | undefined {
 
   if (SKIP_PREFIXES.some((p) => pathname.startsWith(p))) return undefined;
 
-  const urlLocale = deriveUrlLocale(pathname);
+  const urlLocale = deriveUrlLocale(req);
 
   // 1. Honour explicit user choice stored in cookie
   const cookieVal = req.cookies.get("NEXT_LOCALE")?.value;
