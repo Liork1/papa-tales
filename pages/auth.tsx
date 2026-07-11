@@ -1,5 +1,6 @@
 import type { NextPage } from "next";
 import Head from "next/head";
+import Link from "next/link";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/router";
 import { signInWithGoogle, signUpWithEmail, signInWithEmail, sendPasswordReset } from "@/lib/auth";
@@ -80,6 +81,14 @@ const AuthPage: NextPage = () => {
     setMode((m) => (m === "register" ? "signin" : "register"));
     setError(null);
     setForgotSent(false);
+  };
+
+  // Terms/Privacy open in a new tab as a plain page load, so they go through
+  // the locale-redirect middleware — which trusts the NEXT_LOCALE cookie over
+  // the link's href. Stamp the cookie to match this page's own locale first,
+  // so the new tab lands in the same language the user is currently reading.
+  const syncLocaleCookie = () => {
+    document.cookie = `NEXT_LOCALE=${locale}; path=/; max-age=${365 * 24 * 60 * 60}; samesite=lax`;
   };
 
   return (
@@ -214,7 +223,24 @@ const AuthPage: NextPage = () => {
                 {terms ? "✓" : ""}
               </span>
               <span style={{ fontSize: ".82rem", color: "#6b5a82", lineHeight: 1.5 }}>
-                {T.authTermsAgree} <span style={{ color: "#5b37b7", fontWeight: 600 }}>{T.authTermsService}</span> {T.authTermsAnd}<span style={{ color: "#5b37b7", fontWeight: 600 }}>{T.authTermsPrivacy}</span>
+                {T.authTermsAgree}{" "}
+                <Link
+                  href="/terms"
+                  target="_blank"
+                  onClick={(e) => { e.stopPropagation(); syncLocaleCookie(); }}
+                  style={{ color: "#5b37b7", fontWeight: 600 }}
+                >
+                  {T.authTermsService}
+                </Link>{" "}
+                {T.authTermsAnd}{" "}
+                <Link
+                  href="/privacy"
+                  target="_blank"
+                  onClick={(e) => { e.stopPropagation(); syncLocaleCookie(); }}
+                  style={{ color: "#5b37b7", fontWeight: 600 }}
+                >
+                  {T.authTermsPrivacy}
+                </Link>
               </span>
             </label>
           )}
