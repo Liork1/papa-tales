@@ -147,8 +147,24 @@ UI changes, new features, bug fixes, content updates — just merge your PR. And
 Only required if you change the Android shell itself:
 - Production domain changes (e.g. moving to a custom domain)
 - `scope` or `start_url` changed in `public/manifest.webmanifest`
-- Package name changed (`com.papatales.app`)
+- Package name changed (`com.papa_tales.twa`)
 - New Android permissions needed
+- Enabling Google Play Billing support (one-time — see below)
+
+#### Google Play Billing (in-app credit purchases)
+
+Google Play policy requires in-app digital purchases to go through Google Play Billing, not PayPal. The app detects at runtime whether it's running inside the Play-installed TWA (via the browser's Digital Goods API, only present in that context) and shows Play Billing there instead of PayPal — see `lib/play-billing.ts` and `components/UpgradeModal.tsx`.
+
+Server-side purchase verification (`lib/google-play.ts`, `pages/api/play-billing/verify-purchase.ts`) needs these env vars, from a Google Cloud service account granted "Manage orders and subscriptions" access in Play Console → Setup → API access:
+
+```env
+GOOGLE_PLAY_PACKAGE_NAME=com.papa_tales.twa
+GOOGLE_PLAY_SERVICE_ACCOUNT_JSON=<the full service account key JSON, as one line>
+```
+
+The three credit packs (`p3`/`p6`/`p12`) must also exist as in-app products in Play Console → Monetize → Products → In-app products, with product IDs `credits_3`, `credits_6`, `credits_12` (see `lib/billing-packages.ts`).
+
+When regenerating the Android package via PWABuilder, make sure Play Billing support is enabled in the Android package options so the generated app includes the `com.android.vending.BILLING` permission and Play Billing bridge — without this, the Digital Goods API won't be available inside the app and it'll silently fall back to PayPal.
 
 **To cut a new release:**
 1. Go to [pwabuilder.com](https://pwabuilder.com), enter the production URL
