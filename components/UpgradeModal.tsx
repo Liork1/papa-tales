@@ -1,5 +1,8 @@
 import { useState, useEffect } from "react";
 import { authFetch } from "@/lib/auth-fetch";
+import { useUserContext } from "@/lib/user-context";
+import { isPlayBillingAvailable, purchaseViaPlayBilling } from "@/lib/play-billing";
+import { PKG_TO_PLAY_PRODUCT } from "@/lib/billing-packages";
 import TierComparisonModal from "@/components/TierComparisonModal";
 
 // ── Data ──────────────────────────────────────────────────────────────────────
@@ -153,13 +156,14 @@ function CreditsWall({
 
 function BuySheet({
   selectedPkg, setSelectedPkg,
-  onPurchase, loading, onClose,
+  onPurchase, loading, onClose, playBilling,
 }: {
   selectedPkg: PkgId;
   setSelectedPkg: (id: PkgId) => void;
   onPurchase: () => void;
   loading: boolean;
   onClose: () => void;
+  playBilling: boolean;
 }) {
   return (
     <div style={{
@@ -187,7 +191,9 @@ function BuySheet({
       </div>
 
       <button onClick={onPurchase} disabled={loading} dir="rtl" style={{ ...GOLD_BTN, opacity: loading ? 0.7 : 1 }}>
-        {loading ? "מעביר לפייפאל…" : "שלמו ב‑PayPal"}
+        {playBilling
+          ? (loading ? "מעבד תשלום…" : "קנייה דרך Google Play")
+          : (loading ? "מעביר לפייפאל…" : "שלמו ב‑PayPal")}
       </button>
 
       <p style={{ textAlign: "center", fontSize: ".74rem", color: "#b6a48d", margin: ".7rem 0 0" }}>
@@ -211,10 +217,16 @@ interface Props {
 }
 
 export default function UpgradeModal({ view, onClose }: Props) {
+  const { refresh } = useUserContext();
   const [currentView, setCurrentView] = useState<"creditsWall" | "buySheet">(view);
   const [selectedPkg, setSelectedPkg] = useState<PkgId>("p6");
   const [loading, setLoading] = useState(false);
   const [showTierModal, setShowTierModal] = useState(false);
+  const [playBilling, setPlayBilling] = useState(false);
+
+  useEffect(() => {
+    setPlayBilling(isPlayBillingAvailable());
+  }, []);
 
   useEffect(() => {
     const handlePageShow = (e: PageTransitionEvent) => {
@@ -224,7 +236,29 @@ export default function UpgradeModal({ view, onClose }: Props) {
     return () => window.removeEventListener("pageshow", handlePageShow);
   }, []);
 
-  async function handlePurchase() {
+  async function handlePlayBillingPurchase() {
+    setLoading(true);
+    try {
+      const { productId, purchaseToken } = await purchaseViaPlayBilling(PKG_TO_PLAY_PRODUCT[selectedPkg]);
+      const res = await authFetch("/api/play-billing/verify-purchase", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productId, purchaseToken }),
+      });
+      if (res.ok) {
+        await refresh();
+        onClose();
+      } else {
+        alert("שגיאה באימות התשלום, נסו שוב");
+      }
+    } catch {
+      // user cancelled the Play Billing sheet, or a transient error — no alert needed
+    } finally {
+      setLoading(false);
+    }
+  }
+
+  async function handlePayPalPurchase() {
     setLoading(true);
     try {
       const res = await authFetch("/api/paypal/create-order", {
@@ -244,6 +278,8 @@ export default function UpgradeModal({ view, onClose }: Props) {
       setLoading(false);
     }
   }
+
+  const handlePurchase = playBilling ? handlePlayBillingPurchase : handlePayPalPurchase;
 
   return (
     <div
@@ -270,6 +306,7 @@ export default function UpgradeModal({ view, onClose }: Props) {
           onPurchase={handlePurchase}
           loading={loading}
           onClose={onClose}
+          playBilling={playBilling}
         />
       )}
       {showTierModal && (
