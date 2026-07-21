@@ -36,7 +36,17 @@ function deriveUrlLocale(req: NextRequest): "he" | "en" {
   return pathname === "/en" || pathname.startsWith("/en/") ? "en" : "he";
 }
 
-function redirectTo(req: NextRequest, locale: "he" | "en"): NextResponse {
+// Detect common crawler User-Agents so we can avoid issuing 3xx redirects
+// to bots (they'll receive the locale content via a rewrite). Regular
+// users will continue to be redirected to the canonical locale URL.
+function isBotRequest(req: NextRequest): boolean {
+  const ua = req.headers.get("user-agent") ?? "";
+  return /Googlebot|bingbot|Slurp|DuckDuckBot|Baiduspider|YandexBot|facebot|facebookexternalhit|Twitterbot|Applebot/i.test(
+    ua
+  );
+}
+
+function respondWithLocale(req: NextRequest, locale: "he" | "en"): NextResponse {
   const url = req.nextUrl.clone();
   const { pathname } = url;
   const stripped = pathname.replace(/^\/en/, "") || "/";
@@ -47,7 +57,8 @@ function redirectTo(req: NextRequest, locale: "he" | "en"): NextResponse {
     url.pathname = stripped;
   }
 
-  const res = NextResponse.redirect(url);
+  const useRewrite = isBotRequest(req);
+  const res = useRewrite ? NextResponse.rewrite(url) : NextResponse.redirect(url);
   res.cookies.set("NEXT_LOCALE", locale, { path: "/", maxAge: 365 * 24 * 60 * 60, sameSite: "lax" });
   return res;
 }
@@ -63,7 +74,7 @@ export function middleware(req: NextRequest): NextResponse | undefined {
   const cookieVal = req.cookies.get("NEXT_LOCALE")?.value;
   if (cookieVal && VALID_LOCALES.has(cookieVal)) {
     const cookieLocale = cookieVal as "he" | "en";
-    if (cookieLocale !== urlLocale) return redirectTo(req, cookieLocale);
+    if (cookieLocale !== urlLocale) return respondWithLocale(req, cookieLocale);
     return undefined;
   }
 
@@ -71,7 +82,7 @@ export function middleware(req: NextRequest): NextResponse | undefined {
   const acceptLang = req.headers.get("accept-language") ?? "";
   const detected: "he" | "en" = /(?:^|,|\s)he\b/i.test(acceptLang) ? "he" : "en";
 
-  if (detected !== urlLocale) return redirectTo(req, detected);
+  if (detected !== urlLocale) return respondWithLocale(req, detected);
 
   // Same locale — stamp the cookie so future requests skip detection
   const res = NextResponse.next();
