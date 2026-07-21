@@ -74,7 +74,7 @@ export function middleware(req: NextRequest): NextResponse | undefined {
   const cookieVal = req.cookies.get("NEXT_LOCALE")?.value;
   if (cookieVal && VALID_LOCALES.has(cookieVal)) {
     const cookieLocale = cookieVal as "he" | "en";
-    if (cookieLocale !== urlLocale) return redirectTo(req, cookieLocale);
+    if (cookieLocale !== urlLocale) return respondWithLocale(req, cookieLocale);
     return undefined;
   }
 
@@ -82,7 +82,7 @@ export function middleware(req: NextRequest): NextResponse | undefined {
   const acceptLang = req.headers.get("accept-language") ?? "";
   const detected: "he" | "en" = /(?:^|,|\s)he\b/i.test(acceptLang) ? "he" : "en";
 
-  if (detected !== urlLocale) return redirectTo(req, detected);
+  if (detected !== urlLocale) return respondWithLocale(req, detected);
 
   // Same locale — stamp the cookie so future requests skip detection
   const res = NextResponse.next();
