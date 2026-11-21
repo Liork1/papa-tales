@@ -161,6 +161,22 @@ const he = {
   errorTimeout: { glyph: "⏱", title: "זה לקח יותר מדי זמן",            message: "יצירת הסיפור ארכה זמן רב מהצפוי. רוצים שננסה שוב?",                                          primaryLabel: "נסו שוב",      secondaryLabel: "עריכת הבקשה" as string | null },
   errorRate:    { glyph: "⋯", title: "יש כרגע הרבה מבקשי סיפורים",     message: "השירות עמוס לרגע. נסו שוב בעוד מספר שניות — שווה לחכות.",                                    primaryLabel: "נסו שוב",      secondaryLabel: null as string | null },
   errorContent: { glyph: "✎", title: "לא הצלחנו ליצור סיפור מהבקשה הזו", message: "אפשר לנסות לנסח את הבקשה קצת אחרת או להוסיף פרטים, וננסה שוב ביחד.",                     primaryLabel: "עריכת הבקשה", secondaryLabel: null as string | null },
+  // Content validation errors
+  api: {
+    errors: {
+      invalidPrompt: "אנא הכניסו בקשה לסיפור תקינה.",
+      promptTooShort: "כתבו לפחות 10 תווים כדי להתחיל.",
+      promptTooLong: "הבקשה שלכם ארוכה מדי. אנא שמרו על פחות מ־500 תווים.",
+      invalidAgeGroup: "קבוצת גיל לא תקינה.",
+      methodNotAllowed: "שיטה לא מורשית.",
+      inappropriateContent: {
+        general: "לא הצלחנו ליצור סיפור מהבקשה הזו. אנא נסו שנית עם ניסוח אחר.",
+        harassment: "הבקשה שלכם מכילה שפה הקשורה להציקה או בריונות. זה לא מתאים לסיפורי ילדים. אנא נסחו את הבקשה מחדש ונסו שוב.",
+        violence: "הבקשה שלכם מכילה תוכן אלים. סיפורי ילדים צריכים להיות בטוחים וחיוביים. אנא השתמשו בשפה עדינה יותר.",
+        sexual: "הבקשה שלכם מכילה תוכן למבוגרים בלבד. זה לא מתאים לסיפורי ילדים. אנא נסו עם ניסוח אחר.",
+      },
+    },
+  },
   // Functions
   hi: (n: string) => `שלום, ${n}`,
   creditsQuota: (c: number) => `✦ ${c} קרדיטים · סיפור מלא`,

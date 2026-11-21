@@ -7,6 +7,7 @@ import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { serviceDb } from "@/lib/api-auth";
 import { FREE_STORY_LIMIT } from "@/lib/story-limits";
+import { validateContent, getValidationErrorKey } from "@/lib/content-filter";
 
 const VALID_AGE_GROUPS = ["2-4", "4-6", "6-8", "8-10"] as const;
 
@@ -33,6 +34,22 @@ function validateRequest(body: unknown): GenerateStoryRequest {
       message: t("api.errors.promptTooLong"),
       status: 400,
       details: { field: "prompt", reason: "too_long", maxLength: 500 },
+    };
+  }
+
+  // Validate content for inappropriate words
+  const contentValidation = validateContent(prompt);
+  if (!contentValidation.isValid) {
+    throw {
+      code: "INAPPROPRIATE_CONTENT",
+      message: t(getValidationErrorKey(contentValidation.category)),
+      status: 400,
+      details: { 
+        field: "prompt", 
+        reason: "inappropriate_content",
+        category: contentValidation.category,
+        foundWords: contentValidation.foundWords
+      },
     };
   }
 
