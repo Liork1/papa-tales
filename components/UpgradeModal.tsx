@@ -94,7 +94,7 @@ function PkgCards({
 // ── Credits Wall ──────────────────────────────────────────────────────────────
 
 function CreditsWall({
-  selectedPkg, onSelectPkg, onClose, onOpenTiers, locale, copy,
+  selectedPkg, onSelectPkg, onClose, onOpenTiers, locale, copy, tier, profile, credits,
 }: {
   selectedPkg: PkgId;
   onSelectPkg: (id: PkgId) => void;
@@ -102,6 +102,9 @@ function CreditsWall({
   onOpenTiers: () => void;
   locale: string;
   copy: UpgradeCopy;
+  tier?: "guest" | "free" | "paid";
+  profile?: { stories_generated: number; role: string } | null;
+  credits?: number;
 }) {
   const isHebrew = locale === "he";
   return (
@@ -121,7 +124,12 @@ function CreditsWall({
         fontFamily: "'Rubik', sans-serif", fontSize: "1.3rem", fontWeight: 700,
         color: "#3a2a5c", margin: "1rem 0 .5rem",
       }}>
-        {copy.limitTitle}
+        {/* Show different title based on tier and actual usage */}
+        {tier === "paid" && credits === 0
+          ? copy.creditsEmptyTitle
+          : tier === "free" && (profile?.stories_generated ?? 0) > 0
+          ? copy.limitTitle
+          : copy.upgradeTitle}
       </h2>
       <p style={{ fontSize: ".96rem", lineHeight: 1.6, color: "#6b5a82", margin: "0 0 1.3rem" }}>
         {copy.limitBeforeFull}<b style={{ color: "#5b37b7" }}>{copy.fullStories}</b>{copy.limitAfterFull}
@@ -224,9 +232,12 @@ function BuySheet({
 interface Props {
   view: "creditsWall" | "buySheet";
   onClose: () => void;
+  tier?: "guest" | "free" | "paid";
+  profile?: { stories_generated: number; role: string } | null;
+  credits?: number;
 }
 
-export default function UpgradeModal({ view, onClose }: Props) {
+export default function UpgradeModal({ view, onClose, tier = "free", profile, credits = 0 }: Props) {
   const router = useRouter();
   const locale = router.locale ?? "he";
   const T = useLocale();
@@ -314,6 +325,9 @@ export default function UpgradeModal({ view, onClose }: Props) {
           onOpenTiers={() => setShowTierModal(true)}
           locale={locale}
           copy={copy}
+          tier={tier}
+          profile={profile}
+          credits={credits}
         />
       ) : (
         <BuySheet
