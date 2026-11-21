@@ -14,6 +14,7 @@ import TierComparisonModal from "@/components/TierComparisonModal";
 import Image from "next/image";
 import { useLocale } from "@/lib/i18n";
 import LangSwitcher from "@/components/LangSwitcher";
+import { FREE_STORY_LIMIT } from "@/lib/story-limits";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -422,7 +423,7 @@ const Home: NextPage = () => {
 
     // ── Tier gate ────────────────────────────────────────────────────────────
     if (!user && guestUsedToday()) { setPhase("limit"); return; }
-    if (user && tier === "free" && (profile?.stories_generated ?? 0) >= 5) {
+    if (user && tier === "free" && (profile?.stories_generated ?? 0) >= FREE_STORY_LIMIT) {
       setShowUpgradeModal("creditsWall"); return;
     }
     if (user && tier === "paid" && credits <= 0) {
@@ -723,7 +724,7 @@ const Home: NextPage = () => {
                     "@type": "Offer",
                     "price": "0",
                     "priceCurrency": "USD",
-                    "description": "5 סיפורים חינם לאחר הרשמה",
+                    "description": "סיפור חינם אחד לאחר הרשמה",
                   },
                 },
               ],
@@ -1412,7 +1413,7 @@ function FormHeader({ user, tier, credits, profile, role, ready, onSignOut, onUp
   const initial = displayName.trim()[0]?.toUpperCase() ?? "מ";
 
   const used = profile?.stories_generated ?? 0;
-  const remaining = Math.max(0, 5 - used);
+  const remaining = Math.max(0, FREE_STORY_LIMIT - used);
   const isCredits = tier === "paid" && credits > 0;
 
   const quotaStyle: React.CSSProperties = isCredits

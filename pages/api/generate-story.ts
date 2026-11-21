@@ -6,6 +6,7 @@ import { t } from "@/lib/i18n";
 import { logger } from "@/lib/logger";
 import { checkRateLimit } from "@/lib/rate-limit";
 import { serviceDb } from "@/lib/api-auth";
+import { FREE_STORY_LIMIT } from "@/lib/story-limits";
 
 const VALID_AGE_GROUPS = ["2-4", "4-6", "6-8", "8-10"] as const;
 
@@ -106,10 +107,10 @@ export default async function handler(
         .update({ credits_remaining: creditsRemaining - 1, updated_at: new Date().toISOString() })
         .eq("user_id", user.id);
       usedCredit = true;
-    } else if (!useCredit && storiesGenerated >= 5) {
+    } else if (!useCredit && storiesGenerated >= FREE_STORY_LIMIT) {
       return res.status(402).json({
         success: false,
-        error: { code: "QUOTA_EXCEEDED", message: "ניצלתם את 5 הסיפורים החינמיים" },
+        error: { code: "QUOTA_EXCEEDED", message: "ניצלתם את הסיפור החינמי שלכם" },
       });
     } else if (useCredit && creditsRemaining <= 0) {
       return res.status(402).json({

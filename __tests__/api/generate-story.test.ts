@@ -216,9 +216,9 @@ describe("POST /api/generate-story", () => {
   describe("tier quota enforcement", () => {
     const authHeaders = { authorization: "Bearer test-token" };
 
-    it("returns 402 when a free user has used 5 or more stories", async () => {
+    it("returns 402 when a free user has used their one included story", async () => {
       mockServiceDb.mockReturnValue(
-        makeSupabaseMock({ user: { id: "u1" }, storiesGenerated: 5, creditsRemaining: 0 })
+        makeSupabaseMock({ user: { id: "u1" }, storiesGenerated: 1, creditsRemaining: 0 })
       );
       const res = makeRes();
       await handler(makeReq({ prompt: "ילד קטן אוהב לשחק בגינה", useCredit: false }, "POST", authHeaders), res);
