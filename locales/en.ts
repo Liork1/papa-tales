@@ -163,6 +163,22 @@ const en: Locale = {
   errorTimeout: { glyph: "⏱", title: "That took too long",             message: "Creating the story took longer than expected. Want us to try again?",                                    primaryLabel: "Try again",     secondaryLabel: "Edit request" as string | null },
   errorRate:    { glyph: "⋯", title: "Lots of story requests right now", message: "The service is busy for a moment. Try again in a few seconds — it's worth the wait.",                primaryLabel: "Try again",     secondaryLabel: null as string | null },
   errorContent: { glyph: "✎", title: "We couldn't create a story from that",  message: "Try rephrasing or adding a detail, and we'll give it another go together.",                   primaryLabel: "Edit request",  secondaryLabel: null as string | null },
+  // Content validation errors
+  api: {
+    errors: {
+      invalidPrompt: "Please enter a valid story prompt.",
+      promptTooShort: "Write at least 10 characters to begin.",
+      promptTooLong: "Your prompt is too long. Keep it under 500 characters.",
+      invalidAgeGroup: "Invalid age group selected.",
+      methodNotAllowed: "Method not allowed.",
+      inappropriateContent: {
+        general: "We couldn't create a story from that prompt. Please try again with different wording.",
+        harassment: "Your prompt contains language related to harassment or bullying. This isn't suitable for children's stories. Please rephrase and try again.",
+        violence: "Your prompt contains violent content. Children's stories should be safe and positive. Please use gentler wording.",
+        sexual: "Your prompt contains adult content. This isn't appropriate for children's stories. Please try with different wording.",
+      },
+    },
+  },
   // Functions
   hi: (n: string) => `Hi, ${n}`,
   creditsQuota: (c: number) => `✦ ${c} credits · full story`,

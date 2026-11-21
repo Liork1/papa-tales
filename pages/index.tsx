@@ -15,6 +15,7 @@ import Image from "next/image";
 import { useLocale } from "@/lib/i18n";
 import LangSwitcher from "@/components/LangSwitcher";
 import { FREE_STORY_LIMIT } from "@/lib/story-limits";
+import { validateContent, getValidationErrorKey } from "@/lib/content-filter";
 
 // ── Types ────────────────────────────────────────────────────────────────────
 
@@ -179,6 +180,7 @@ const Home: NextPage = () => {
   const [story, setStory] = useState<StoryData | null>(null);
   const [images, setImages] = useState<Record<string, ImageState>>({});
   const [appError, setAppError] = useState<AppError | null>(null);
+  const [validationError, setValidationError] = useState<{ message: string; category?: string } | null>(null);
   const [demoMode, setDemoMode] = useState(false);
   const [savedGuestTitle, setSavedGuestTitle] = useState("");
   const [library, setLibrary] = useState<LibraryStory[]>([]);
@@ -418,8 +420,29 @@ const Home: NextPage = () => {
     setImages((prev) => ({ ...prev, [key]: url ?? "error" }));
   }, []);
 
+  // Validate prompt for inappropriate content
+  const validatePrompt = (text: string): boolean => {
+    if (!text.trim()) return true;
+    
+    const validation = validateContent(text);
+    if (!validation.isValid) {
+      const errorKey = getValidationErrorKey(validation.category);
+      setValidationError({
+        message: T.api?.errors?.inappropriateContent?.[validation.category ?? "general"] || T.api?.errors?.inappropriateContent?.general || "Invalid content",
+        category: validation.category,
+      });
+      return false;
+    }
+    
+    setValidationError(null);
+    return true;
+  };
+
   const handleGenerate = async () => {
     if (prompt.trim().length < 10) return;
+
+    // ── Validate content ─────────────────────────────────────────────────────
+    if (!validatePrompt(prompt)) return;
 
     // ── Tier gate ────────────────────────────────────────────────────────────
     if (!user && guestUsedToday()) { setPhase("limit"); return; }
@@ -461,6 +484,7 @@ const Home: NextPage = () => {
         if (code === "RATE_LIMIT_EXCEEDED") scenario = "rate";
         else if (code === "INVALID_INPUT") scenario = "content";
         setAppError({ scenario, savedPrompt });
+        setValidationError(null);
         setPhase("form");
         return;
       }
@@ -512,6 +536,7 @@ const Home: NextPage = () => {
       let scenario: ErrorScenario = "server";
       if (typeof navigator !== "undefined" && !navigator.onLine) scenario = "offline";
       setAppError({ scenario, savedPrompt });
+      setValidationError(null);
       setPhase("form");
     }
   };
@@ -523,6 +548,7 @@ const Home: NextPage = () => {
 
   const handleEditPrompt = () => {
     setAppError(null);
+    setValidationError(null);
     setPhase("form");
   };
 
@@ -547,6 +573,7 @@ const Home: NextPage = () => {
     stopSpeech();
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
     setPrompt("");
+    setValidationError(null);
     setPhase(!user && guestUsedToday() ? "limit" : "form");
     setCurrentPage(0);
     setDemoMode(false);
@@ -911,10 +938,31 @@ const Home: NextPage = () => {
                 className={styles.textarea}
                 placeholder={T.promptPh}
                 value={prompt}
-                onChange={(e) => setPrompt(e.target.value)}
+                onChange={(e) => {
+                  setPrompt(e.target.value);
+                  if (e.target.value.trim().length >= 10) {
+                    validatePrompt(e.target.value);
+                  } else {
+                    setValidationError(null);
+                  }
+                }}
                 maxLength={500}
               />
               <div className={styles.charCount}>{counterText}</div>
+              {validationError && (
+                <div style={{
+                  marginTop: "0.5rem",
+                  padding: "0.75rem",
+                  backgroundColor: "#fee",
+                  borderLeft: "3px solid #c33",
+                  borderRadius: "0.25rem",
+                  fontSize: "0.85rem",
+                  color: "#a33",
+                  lineHeight: 1.4,
+                }}>
+                  {validationError.message}
+                </div>
+              )}
             </div>
 
             <div className={styles.field}>
@@ -962,13 +1010,13 @@ const Home: NextPage = () => {
             <button
               className={styles.generateBtn}
               onClick={handleGenerate}
-              disabled={!canGen}
+              disabled={!canGen || !!validationError}
               style={{
-                background: canGen
+                background: (canGen && !validationError)
                   ? `linear-gradient(135deg, ${ACCENT.main}, ${ACCENT.deep})`
                   : "rgba(100,80,140,.35)",
-                boxShadow: canGen ? `0 10px 24px ${ACCENT.main}55` : "none",
-                opacity: canGen ? 1 : 0.7,
+                boxShadow: (canGen && !validationError) ? `0 10px 24px ${ACCENT.main}55` : "none",
+                opacity: (canGen && !validationError) ? 1 : 0.7,
               }}
             >
               {tier === "paid" && credits > 0 ? T.genFull : T.genBasic}
