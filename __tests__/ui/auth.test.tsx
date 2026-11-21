@@ -40,10 +40,11 @@ describe("Auth page — register mode (default)", () => {
     expect(screen.getByRole("button", { name: /הרשמה עם Google/i })).toBeInTheDocument();
   });
 
-  it("shows email, password and display-name fields", () => {
+  it("shows email, password, confirmation and display-name fields", () => {
     render(<AuthPage />);
     expect(screen.getByPlaceholderText("name@example.com")).toBeInTheDocument();
-    expect(screen.getByPlaceholderText("••••••••")).toBeInTheDocument();
+    expect(screen.getAllByPlaceholderText("••••••••")).toHaveLength(2);
+    expect(screen.getByText("אימות סיסמה")).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/איך לפנות אליך/i)).toBeInTheDocument();
   });
 
@@ -69,7 +70,9 @@ describe("Auth page — register mode (default)", () => {
     render(<AuthPage />);
 
     await userEvent.type(screen.getByPlaceholderText("name@example.com"), "a@b.com");
-    await userEvent.type(screen.getByPlaceholderText("••••••••"), "password123");
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    await userEvent.type(passwordInputs[0], "password123");
+    await userEvent.type(passwordInputs[1], "password123");
 
     // Accept terms — onClick lives on the first <span> inside the label, not the label itself
     const checkboxSpan = screen.getByText(/תנאי השימוש/i).closest("label")!.querySelector("span")!;
@@ -86,6 +89,18 @@ describe("Auth page — register mode (default)", () => {
     render(<AuthPage />);
     await userEvent.click(screen.getByRole("button", { name: /כניסה/i }));
     expect(screen.getByRole("heading", { name: /כניסה לחשבון/i })).toBeInTheDocument();
+  });
+
+  it("blocks registration and shows a message when passwords do not match", async () => {
+    render(<AuthPage />);
+    await userEvent.type(screen.getByPlaceholderText("name@example.com"), "a@b.com");
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    await userEvent.type(passwordInputs[0], "password123");
+    await userEvent.type(passwordInputs[1], "password456");
+
+    expect(screen.getByRole("alert", { name: "הסיסמאות אינן תואמות" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /יצירת חשבון/i })).toBeDisabled();
+    expect(mockSignUpWithEmail).not.toHaveBeenCalled();
   });
 });
 
@@ -108,6 +123,7 @@ describe("Auth page — sign-in mode", () => {
   it("does not show the display-name or terms fields in sign-in mode", () => {
     renderSignIn();
     expect(screen.queryByPlaceholderText(/איך לפנות אליך/i)).not.toBeInTheDocument();
+    expect(screen.queryByText("אימות סיסמה")).not.toBeInTheDocument();
     expect(screen.queryByText(/תנאי השימוש/i)).not.toBeInTheDocument();
   });
 

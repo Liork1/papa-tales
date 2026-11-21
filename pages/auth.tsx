@@ -17,6 +17,7 @@ const AuthPage: NextPage = () => {
   const [mode, setMode] = useState<"register" | "signin">("register");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const [displayName, setDisplayName] = useState("");
   const [terms, setTerms] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -32,7 +33,8 @@ const AuthPage: NextPage = () => {
 
   const isRegister = mode === "register";
   const nm = displayName.trim();
-  const ctaDisabled = loading || googleLoading || (isRegister && !terms) || !email || !password;
+  const passwordsMatch = password === confirmPassword;
+  const ctaDisabled = loading || googleLoading || (isRegister && (!terms || !confirmPassword || !passwordsMatch)) || !email || !password;
 
   const handleGoogle = async () => {
     if (loading || googleLoading) return;
@@ -184,6 +186,30 @@ const AuthPage: NextPage = () => {
               style={{ width: "100%", boxSizing: "border-box", padding: ".7rem .9rem", border: "1.5px solid #e7dccd", borderRadius: 14, fontSize: "1rem", fontFamily: "'Assistant', sans-serif", background: "#fffdf8", color: "#3a2a1a", direction: "ltr", textAlign: "left", outline: "none" }}
             />
           </div>
+
+          {/* Confirm password (register only) */}
+          {isRegister && (
+            <div style={{ marginBottom: ".9rem" }}>
+              <label style={{ display: "block", fontFamily: "'Rubik', sans-serif", fontSize: ".82rem", fontWeight: 600, color: "#5c4a78", marginBottom: ".4rem" }}>
+                {T.authConfirmPassword}
+              </label>
+              <input
+                type="password"
+                placeholder="••••••••"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                onKeyDown={(e) => e.key === "Enter" && handleSubmit()}
+                aria-invalid={Boolean(confirmPassword && !passwordsMatch)}
+                aria-describedby={confirmPassword && !passwordsMatch ? "password-mismatch" : undefined}
+                style={{ width: "100%", boxSizing: "border-box", padding: ".7rem .9rem", border: `1.5px solid ${confirmPassword && !passwordsMatch ? "#d65a5a" : "#e7dccd"}`, borderRadius: 14, fontSize: "1rem", fontFamily: "'Assistant', sans-serif", background: "#fffdf8", color: "#3a2a1a", direction: "ltr", textAlign: "left", outline: "none" }}
+              />
+              {confirmPassword && !passwordsMatch && (
+                <div id="password-mismatch" role="alert" style={{ fontSize: ".75rem", color: "#a63232", marginTop: ".35rem" }}>
+                  {T.authPasswordsDontMatch}
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Display name (register only) */}
           {isRegister && (
