@@ -13,7 +13,7 @@ AI-powered Hebrew children's story generator. Generates rhyming stories using Op
 ### 1. Install dependencies
 
 ```bash
-npm install
+bun install
 ```
 
 ### 2. Environment variables
@@ -35,7 +35,7 @@ Change `OPENROUTER_MODEL` to switch providers, for example `google/gemini-2.5-pr
 ### 3. Start local Supabase
 
 ```bash
-npm run supabase:start
+bun run supabase:start
 ```
 
 This prints the `anon key` — copy it into `SUPABASE_ANON_KEY`.
@@ -51,7 +51,7 @@ This applies `supabase/migrations/20240101000000_create_stories_table.sql`.
 ### 5. Seed the database
 
 ```bash
-npm run seed
+bun run seed
 ```
 
 Inserts 12 Hebrew inspirational stories covering friendship, courage, creativity, and more.
@@ -59,7 +59,7 @@ Inserts 12 Hebrew inspirational stories covering friendship, courage, creativity
 ### 6. Start the dev server
 
 ```bash
-npm run dev
+bun run dev
 ```
 
 App runs at `http://localhost:3000`.
