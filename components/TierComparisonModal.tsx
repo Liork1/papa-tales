@@ -1,4 +1,5 @@
 import React from "react";
+import { useRouter } from "next/router";
 import { useLocale } from "@/lib/i18n";
 
 interface Props {
@@ -6,6 +7,7 @@ interface Props {
 }
 
 export default function TierComparisonModal({ onClose }: Props) {
+  const { locale } = useRouter();
   const T = useLocale();
   const tiers = T.tierData;
 
@@ -21,7 +23,7 @@ export default function TierComparisonModal({ onClose }: Props) {
       }}
     >
       <div
-        dir="rtl"
+        dir={locale === "he" ? "rtl" : "ltr"}
         onClick={(e) => e.stopPropagation()}
         style={{
           position: "relative",

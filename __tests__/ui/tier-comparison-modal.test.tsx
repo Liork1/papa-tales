@@ -3,6 +3,7 @@ import TierComparisonModal from "@/components/TierComparisonModal";
 import { useLocale } from "@/lib/i18n";
 
 jest.mock("@/lib/i18n");
+jest.mock("next/router", () => ({ useRouter: () => ({ locale: "he" }) }));
 
 const mockUseLocale = useLocale as jest.MockedFunction<typeof useLocale>;
 
@@ -25,7 +26,7 @@ const MOCK_T = {
     {
       name: "חשבון חינם",
       icon: "🎁",
-      quota: "5 סיפורים בסיסיים",
+      quota: "סיפור בסיסי אחד",
       premium: false,
       features: [{ ok: true, text: "כל מה שיש במצב אורח" }],
     },

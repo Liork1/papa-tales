@@ -1,6 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { getRequestUser } from "@/lib/api-auth";
-import { PACKAGES, PkgId, paypalBase, getPayPalAccessToken } from "@/lib/paypal";
+import { getPackagePrice, PACKAGES, PkgId, paypalBase, getPayPalAccessToken } from "@/lib/paypal";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   if (req.method !== "POST") return res.status(405).end();
@@ -8,8 +8,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   const user = await getRequestUser(req, res);
   if (!user) return;
 
-  const pkgId = ((req.body?.pkgId as string) ?? "p6") as PkgId;
-  const pkg = PACKAGES[pkgId] ?? PACKAGES.p6;
+  const requestedPkgId = req.body?.pkgId as string | undefined;
+  const pkgId: PkgId = requestedPkgId && requestedPkgId in PACKAGES
+    ? requestedPkgId as PkgId
+    : "p6";
+  const pkg = PACKAGES[pkgId];
+  const locale = req.body?.locale === "he" ? "he" : "en";
+  const price = getPackagePrice(pkg, locale);
   const appUrl = process.env.NEXT_PUBLIC_APP_URL ?? "http://localhost:3000";
 
   const accessToken = await getPayPalAccessToken();
@@ -24,14 +29,14 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       intent: "CAPTURE",
       purchase_units: [{
         custom_id: pkgId,
-        amount: { currency_code: "USD", value: pkg.amount },
+        amount: { currency_code: price.currencyCode, value: price.amount },
         description: `Papa Tales — ${pkg.credits} סיפורים`,
       }],
       application_context: {
         return_url: `${appUrl}/?payment=success`,
         cancel_url: `${appUrl}/?payment=cancel`,
         brand_name: "Papa Tales",
-        locale: "he-IL",
+        locale: locale === "he" ? "he-IL" : "en-US",
         landing_page: "BILLING",
         user_action: "PAY_NOW",
         shipping_preference: "NO_SHIPPING",

@@ -1,10 +1,17 @@
 export const PACKAGES = {
-  p3:  { credits: 3,  amount: "3.00" },
-  p6:  { credits: 6,  amount: "5.00" },
-  p12: { credits: 12, amount: "8.00" },
+  p3:  { credits: 3,  usdAmount: "3.49", ilsAmount: "12.00" },
+  p6:  { credits: 6,  usdAmount: "6.49", ilsAmount: "22.00" },
+  p12: { credits: 12, usdAmount: "12.49", ilsAmount: "42.00" },
 } as const;
 
 export type PkgId = keyof typeof PACKAGES;
+export type CheckoutLocale = "he" | "en";
+
+export function getPackagePrice(pkg: (typeof PACKAGES)[PkgId], locale: CheckoutLocale) {
+  return locale === "he"
+    ? { currencyCode: "ILS", amount: pkg.ilsAmount }
+    : { currencyCode: "USD", amount: pkg.usdAmount };
+}
 
 export function paypalBase(): string {
   return process.env.PAYPAL_MODE === "live"
