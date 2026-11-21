@@ -193,6 +193,8 @@ const en: Locale = {
   authOr: "or",
   authEmail: "Email",
   authPassword: "Password",
+  authConfirmPassword: "Confirm password",
+  authPasswordsDontMatch: "Passwords do not match",
   authDisplayName: "Display name",
   authDisplayNamePh: "What should we call you?",
   authDisplayNameSuffix: "We'll greet you as:",
