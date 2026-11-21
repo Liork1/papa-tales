@@ -193,6 +193,8 @@ const he = {
   authOr: "או",
   authEmail: "אימייל",
   authPassword: "סיסמה",
+  authConfirmPassword: "אימות סיסמה",
+  authPasswordsDontMatch: "הסיסמאות אינן תואמות",
   authDisplayName: "שם תצוגה",
   authDisplayNamePh: "איך לפנות אליך?",
   authDisplayNameSuffix: "כך נפנה אליך:",
