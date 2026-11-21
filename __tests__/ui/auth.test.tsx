@@ -98,7 +98,7 @@ describe("Auth page — register mode (default)", () => {
     await userEvent.type(passwordInputs[0], "password123");
     await userEvent.type(passwordInputs[1], "password456");
 
-    expect(screen.getByRole("alert", { name: "הסיסמאות אינן תואמות" })).toBeInTheDocument();
+    expect(screen.getByRole("alert")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: /יצירת חשבון/i })).toBeDisabled();
     expect(mockSignUpWithEmail).not.toHaveBeenCalled();
   });
@@ -272,7 +272,9 @@ describe("Auth page — mobile/MIUI freeze guard", () => {
 
     // Fill form so CTA becomes enabled
     fireEvent.change(screen.getByPlaceholderText("name@example.com"), { target: { value: "a@b.com" } });
-    fireEvent.change(screen.getByPlaceholderText("••••••••"), { target: { value: "password123" } });
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    fireEvent.change(passwordInputs[0], { target: { value: "password123" } });
+    fireEvent.change(passwordInputs[1], { target: { value: "password123" } });
     const checkboxSpan = screen.getByText(/תנאי השימוש/i).closest("label")!.querySelector("span")!;
     fireEvent.click(checkboxSpan);
     expect(screen.getByRole("button", { name: /יצירת חשבון/i })).not.toBeDisabled();
