@@ -49,6 +49,8 @@ const en: Locale = {
     recommended: "Recommended",
     bestValue: "Best value",
     limitTitle: "You've used your free story",
+    upgradeTitle: "Upgrade to get more stories",
+    creditsEmptyTitle: "You've used all your credits",
     limitBeforeFull: "To continue, choose a credit pack — this time your stories are ",
     fullStories: "full",
     limitAfterFull: ": an illustration on every page and voice narration.",

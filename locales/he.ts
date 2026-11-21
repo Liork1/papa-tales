@@ -47,6 +47,8 @@ const he = {
     recommended: "מומלץ",
     bestValue: "הכי משתלם",
     limitTitle: "ניצלתם את הסיפור החינמי שלכם",
+    upgradeTitle: "שדרגו כדי לקבל עוד סיפורים",
+    creditsEmptyTitle: "ניצלתם את כל הקרדיטים שלכם",
     limitBeforeFull: "כדי להמשיך, קבלו חבילת קרדיטים — והפעם הסיפורים מגיעים ",
     fullStories: "מלאים",
     limitAfterFull: ": איור בכל עמוד והקראה קולית.",

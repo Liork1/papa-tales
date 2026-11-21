@@ -221,7 +221,7 @@ export default async function handler(
     const uid = user.id;
     await Promise.all([
       (async () => {
-        const { data } = await db.from("user_profiles").select("stories_generated").eq("id", uid).single();
+        const { data } = await db.from("user_profiles").select("stories_generated").eq("id", uid).maybeSingle();
         await db.from("user_profiles").upsert(
           { id: uid, stories_generated: (data?.stories_generated ?? 0) + 1 },
           { onConflict: "id" }

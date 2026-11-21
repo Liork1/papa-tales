@@ -1191,6 +1191,9 @@ const Home: NextPage = () => {
         <UpgradeModal
           view={showUpgradeModal}
           onClose={() => setShowUpgradeModal(null)}
+          tier={tier}
+          profile={profile}
+          credits={credits}
         />
       )}
       {showSuccessModal && (
