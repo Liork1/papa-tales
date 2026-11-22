@@ -231,6 +231,17 @@ const en: Locale = {
   authForgotNoEmail: "Enter your email above before resetting",
   authGoogleError: "Google sign-in failed. Please try again or use email.",
   authTimeout: "The request took too long. Check your connection and try again.",
+  // Email confirmation
+  authConfirmSent: "Check your email to confirm your account",
+  authConfirmSubtitle: "We sent a confirmation link to",
+  authConfirmHint: "Click the link in your email to complete sign-up. It expires in 24 hours.",
+  authConfirmResend: "Didn't get the email? Check your spam folder or",
+  authConfirmResendLink: "send it again",
+  authConfirmWaiting: "Confirming your email…",
+  authConfirmSuccess: "✓ Welcome! Your account is confirmed",
+  authConfirmSuccessHint: "You're all set. Let's create your first story…",
+  authConfirmError: "Confirmation link expired or invalid",
+  authConfirmErrorHint: "Try signing up again, or sign in if you already have an account.",
 };
 
 export default en;

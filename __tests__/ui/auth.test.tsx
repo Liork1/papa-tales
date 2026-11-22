@@ -180,6 +180,314 @@ describe("Auth page — sign-in mode", () => {
 });
 
 // ---------------------------------------------------------------------------
+// Email confirmation flow tests
+// ---------------------------------------------------------------------------
+describe("Auth page — email confirmation flow", () => {
+  it("shows confirmation screen after successful registration", async () => {
+    mockSignUpWithEmail.mockResolvedValue({ error: null });
+    render(<AuthPage />);
+
+    const email = "user@test.com";
+    await userEvent.type(screen.getByPlaceholderText("name@example.com"), email);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    await userEvent.type(passwordInputs[0], "password123");
+    await userEvent.type(passwordInputs[1], "password123");
+
+    // Accept terms
+    const checkboxSpan = screen.getByText(/תנאי השימוש/i).closest("label")!.querySelector("span")!;
+    await userEvent.click(checkboxSpan);
+
+    await userEvent.click(screen.getByRole("button", { name: /יצירת חשבון/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/בדקו את האימייל/i)).toBeInTheDocument();
+    });
+  });
+
+  it("displays the email address in confirmation screen", async () => {
+    mockSignUpWithEmail.mockResolvedValue({ error: null });
+    render(<AuthPage />);
+
+    const email = "myemail@example.com";
+    await userEvent.type(screen.getByPlaceholderText("name@example.com"), email);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    await userEvent.type(passwordInputs[0], "password123");
+    await userEvent.type(passwordInputs[1], "password123");
+
+    // Accept terms
+    const checkboxSpan = screen.getByText(/תנאי השימוש/i).closest("label")!.querySelector("span")!;
+    await userEvent.click(checkboxSpan);
+
+    await userEvent.click(screen.getByRole("button", { name: /יצירת חשבון/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(email)).toBeInTheDocument();
+    });
+  });
+
+  it("hides registration form when confirmation screen is shown", async () => {
+    mockSignUpWithEmail.mockResolvedValue({ error: null });
+    render(<AuthPage />);
+
+    const email = "user@test.com";
+    await userEvent.type(screen.getByPlaceholderText("name@example.com"), email);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    await userEvent.type(passwordInputs[0], "password123");
+    await userEvent.type(passwordInputs[1], "password123");
+
+    // Accept terms
+    const checkboxSpan = screen.getByText(/תנאי השימוש/i).closest("label")!.querySelector("span")!;
+    await userEvent.click(checkboxSpan);
+
+    await userEvent.click(screen.getByRole("button", { name: /יצירת חשבון/i }));
+
+    await waitFor(() => {
+      expect(screen.queryByText(/תנאי השימוש/i)).not.toBeInTheDocument();
+      expect(screen.queryByText(/אימות סיסמה/i)).not.toBeInTheDocument();
+    });
+  });
+
+  it("shows confirmation hint about checking email", async () => {
+    mockSignUpWithEmail.mockResolvedValue({ error: null });
+    render(<AuthPage />);
+
+    const email = "user@test.com";
+    await userEvent.type(screen.getByPlaceholderText("name@example.com"), email);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    await userEvent.type(passwordInputs[0], "password123");
+    await userEvent.type(passwordInputs[1], "password123");
+
+    // Accept terms
+    const checkboxSpan = screen.getByText(/תנאי השימוש/i).closest("label")!.querySelector("span")!;
+    await userEvent.click(checkboxSpan);
+
+    await userEvent.click(screen.getByRole("button", { name: /יצירת חשבון/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/לחצו על הקישור באימייל/i)).toBeInTheDocument();
+      expect(screen.getByText(/24 שעות/i)).toBeInTheDocument();
+    });
+  });
+
+  it("shows resend option on confirmation screen", async () => {
+    mockSignUpWithEmail.mockResolvedValue({ error: null });
+    render(<AuthPage />);
+
+    const email = "user@test.com";
+    await userEvent.type(screen.getByPlaceholderText("name@example.com"), email);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    await userEvent.type(passwordInputs[0], "password123");
+    await userEvent.type(passwordInputs[1], "password123");
+
+    // Accept terms
+    const checkboxSpan = screen.getByText(/תנאי השימוש/i).closest("label")!.querySelector("span")!;
+    await userEvent.click(checkboxSpan);
+
+    await userEvent.click(screen.getByRole("button", { name: /יצירת חשבון/i }));
+
+    await waitFor(() => {
+      expect(screen.getByText(/לא קיבלתם את האימייל/i)).toBeInTheDocument();
+      expect(screen.getByText(/שלחו שוב/i)).toBeInTheDocument();
+    });
+  });
+
+  it("allows going back to sign-in from confirmation screen", async () => {
+    mockSignUpWithEmail.mockResolvedValue({ error: null });
+    render(<AuthPage />);
+
+    const email = "user@test.com";
+    await userEvent.type(screen.getByPlaceholderText("name@example.com"), email);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    await userEvent.type(passwordInputs[0], "password123");
+    await userEvent.type(passwordInputs[1], "password123");
+
+    // Accept terms
+    const checkboxSpan = screen.getByText(/תנאי השימוש/i).closest("label")!.querySelector("span")!;
+    await userEvent.click(checkboxSpan);
+
+    await userEvent.click(screen.getByRole("button", { name: /יצירת חשבון/i }));
+
+    // Wait for confirmation screen to show
+    await waitFor(() => {
+      expect(screen.getByText(/בדקו את האימייל/i)).toBeInTheDocument();
+    });
+
+    // Click the forgot-password button to go to sign-in mode
+    // (The sign-in button on confirmation screen toggles to sign-in mode)
+    const signInButtons = screen.getAllByRole("button", { name: /כניסה/i });
+    const confirmationSignInButton = signInButtons[signInButtons.length - 1]; // Get the last one (the main CTA on confirmation screen)
+    await userEvent.click(confirmationSignInButton);
+
+    // After toggling, should not see confirmation message anymore
+    await waitFor(() => {
+      expect(screen.queryByText(/בדקו את האימייל/i)).not.toBeInTheDocument();
+      // Should see forgot password button which only appears in sign-in mode
+      expect(screen.getByRole("button", { name: /שכחתי סיסמה/i })).toBeInTheDocument();
+    });
+  });
+
+  it("resets confirmationSent when toggling back to register mode", async () => {
+    mockSignUpWithEmail.mockResolvedValue({ error: null });
+    render(<AuthPage />);
+
+    const email = "user@test.com";
+    await userEvent.type(screen.getByPlaceholderText("name@example.com"), email);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    await userEvent.type(passwordInputs[0], "password123");
+    await userEvent.type(passwordInputs[1], "password123");
+
+    // Accept terms
+    const checkboxSpan = screen.getByText(/תנאי השימוש/i).closest("label")!.querySelector("span")!;
+    await userEvent.click(checkboxSpan);
+
+    await userEvent.click(screen.getByRole("button", { name: /יצירת חשבון/i }));
+
+    // Wait for confirmation screen
+    await waitFor(() => {
+      expect(screen.getByText(/בדקו את האימייל/i)).toBeInTheDocument();
+    });
+
+    // Toggle to sign-in
+    const signInButtons = screen.getAllByRole("button", { name: /כניסה/i });
+    await userEvent.click(signInButtons[signInButtons.length - 1]);
+
+    // Wait for sign-in form to show
+    await waitFor(() => {
+      expect(screen.getByRole("button", { name: /שכחתי סיסמה/i })).toBeInTheDocument();
+    });
+
+    // Toggle back to register
+    await userEvent.click(screen.getByRole("button", { name: /הרשמה/i }));
+
+    // Should show register form without confirmation screen
+    await waitFor(() => {
+      expect(screen.queryByText(/בדקו את האימייל/i)).not.toBeInTheDocument();
+      expect(screen.getByText(/תנאי השימוש/i)).toBeInTheDocument();
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Password visibility toggle tests
+// ---------------------------------------------------------------------------
+describe("Auth page — password visibility toggle", () => {
+  it("shows eye icon buttons on password fields in registration mode", () => {
+    render(<AuthPage />);
+    const eyeButtons = screen.getAllByRole("button", { name: /show password|hide password/i });
+    expect(eyeButtons).toHaveLength(2); // password + confirm password
+  });
+
+  it("toggles password visibility when eye button is clicked (registration)", async () => {
+    render(<AuthPage />);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    const passwordInput = passwordInputs[0];
+    const eyeButtons = screen.getAllByRole("button", { name: /show password|hide password/i });
+
+    // Initially password is hidden
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    // Click eye button to show password
+    await userEvent.click(eyeButtons[0]);
+    expect(passwordInput).toHaveAttribute("type", "text");
+
+    // Click again to hide password
+    await userEvent.click(eyeButtons[0]);
+    expect(passwordInput).toHaveAttribute("type", "password");
+  });
+
+  it("toggles confirm password visibility when eye button is clicked (registration)", async () => {
+    render(<AuthPage />);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    const confirmPasswordInput = passwordInputs[1];
+    const eyeButtons = screen.getAllByRole("button", { name: /show password|hide password/i });
+
+    // Initially confirm password is hidden
+    expect(confirmPasswordInput).toHaveAttribute("type", "password");
+
+    // Click eye button to show confirm password
+    await userEvent.click(eyeButtons[1]);
+    expect(confirmPasswordInput).toHaveAttribute("type", "text");
+
+    // Click again to hide confirm password
+    await userEvent.click(eyeButtons[1]);
+    expect(confirmPasswordInput).toHaveAttribute("type", "password");
+  });
+
+  it("allows typing and viewing password in registration mode", async () => {
+    render(<AuthPage />);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    const passwordInput = passwordInputs[0];
+    const eyeButtons = screen.getAllByRole("button", { name: /show password|hide password/i });
+
+    // Type password
+    await userEvent.type(passwordInput, "mySecurePass123");
+
+    // Password is hidden, so we can't see the value directly
+    expect(passwordInput).toHaveValue("mySecurePass123");
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    // Click eye to show
+    await userEvent.click(eyeButtons[0]);
+    expect(passwordInput).toHaveAttribute("type", "text");
+    expect(passwordInput).toHaveValue("mySecurePass123");
+  });
+
+  it("toggles password visibility in sign-in mode", async () => {
+    render(<AuthPage />);
+    // Switch to sign-in mode
+    fireEvent.click(screen.getByRole("button", { name: /כניסה/i }));
+
+    const passwordInput = screen.getByPlaceholderText("••••••••");
+    const eyeButton = screen.getByRole("button", { name: /show password|hide password/i });
+
+    // Initially password is hidden
+    expect(passwordInput).toHaveAttribute("type", "password");
+
+    // Click eye button to show password
+    await userEvent.click(eyeButton);
+    expect(passwordInput).toHaveAttribute("type", "text");
+
+    // Click again to hide password
+    await userEvent.click(eyeButton);
+    expect(passwordInput).toHaveAttribute("type", "password");
+  });
+
+  it("maintains separate visibility state for password and confirm password", async () => {
+    render(<AuthPage />);
+    const passwordInputs = screen.getAllByPlaceholderText("••••••••");
+    const passwordInput = passwordInputs[0];
+    const confirmPasswordInput = passwordInputs[1];
+    const eyeButtons = screen.getAllByRole("button", { name: /show password|hide password/i });
+
+    // Show only password, keep confirm hidden
+    await userEvent.click(eyeButtons[0]);
+    expect(passwordInput).toHaveAttribute("type", "text");
+    expect(confirmPasswordInput).toHaveAttribute("type", "password");
+
+    // Now show confirm password, keep password shown
+    await userEvent.click(eyeButtons[1]);
+    expect(passwordInput).toHaveAttribute("type", "text");
+    expect(confirmPasswordInput).toHaveAttribute("type", "text");
+
+    // Hide password, keep confirm shown
+    await userEvent.click(eyeButtons[0]);
+    expect(passwordInput).toHaveAttribute("type", "password");
+    expect(confirmPasswordInput).toHaveAttribute("type", "text");
+  });
+
+  it("has proper aria-labels for accessibility", () => {
+    render(<AuthPage />);
+    const eyeButtons = screen.getAllByRole("button", { name: /show password|hide password/i });
+    
+    expect(eyeButtons.length).toBeGreaterThan(0);
+    eyeButtons.forEach((button) => {
+      const ariaLabel = button.getAttribute("aria-label");
+      expect(ariaLabel).toMatch(/show password|hide password/i);
+    });
+  });
+});
+
+// ---------------------------------------------------------------------------
 // Tests that guard against the Xiaomi/MIUI device freeze:
 //   • Google OAuth redirect silently blocked → page looks frozen, no feedback
 //   • Email sign-in Supabase request hanging → loading spinner never clears
