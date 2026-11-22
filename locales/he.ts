@@ -229,6 +229,17 @@ const he = {
   authForgotNoEmail: "הכניסו אימייל בשדה למעלה לפני השחזור",
   authGoogleError: "כניסה עם Google נכשלה. נסו שנית או השתמשו באימייל.",
   authTimeout: "הפעולה ארכה זמן רב. בדקו את החיבור לאינטרנט ונסו שנית.",
+  // Email confirmation
+  authConfirmSent: "בדקו את האימייל כדי לאשר את החשבון",
+  authConfirmSubtitle: "שלחנו קישור אישור ל",
+  authConfirmHint: "לחצו על הקישור באימייל כדי להשלים את ההרשמה. הקישור תקף לתוך 24 שעות.",
+  authConfirmResend: "לא קיבלתם את האימייל? בדקו את תיקיית הספאם או",
+  authConfirmResendLink: "שלחו שוב",
+  authConfirmWaiting: "מאשרים את האימייל שלך…",
+  authConfirmSuccess: "✓ ברוכים הבאים! החשבון שלך אושר",
+  authConfirmSuccessHint: "הכל מוכן. בואו ניצור את הסיפור הראשון שלך…",
+  authConfirmError: "קישור האישור פג תוקף או אינו תקף",
+  authConfirmErrorHint: "נסו להירשם שוב, או התחברו אם כבר יש לכם חשבון.",
 };
 
 export default he;
